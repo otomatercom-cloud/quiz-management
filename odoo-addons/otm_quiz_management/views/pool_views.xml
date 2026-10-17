@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_pool_list" model="ir.ui.view">
+        <field name="name">otm.quiz.question.pool.list</field>
+        <field name="model">otm.quiz.question.pool</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="quiz_id"/>
+                <field name="question_type"/>
+                <field name="difficulty"/>
+                <field name="questions_to_select"/>
+                <field name="eligible_count"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_pool_form" model="ir.ui.view">
+        <field name="name">otm.quiz.question.pool.form</field>
+        <field name="model">otm.quiz.question.pool</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="quiz_id"/>
+                            <field name="question_type"/>
+                            <field name="difficulty"/>
+                        </group>
+                        <group>
+                            <field name="subject"/>
+                            <field name="topic"/>
+                            <field name="questions_to_select"/>
+                            <field name="marks_per_question"/>
+                            <field name="eligible_count"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group string="Explicit eligible questions (optional)">
+                        <field name="question_ids" nolabel="1" widget="many2many">
+                            <list>
+                                <field name="question_text"/>
+                                <field name="subject"/>
+                                <field name="difficulty"/>
+                                <field name="marks"/>
+                            </list>
+                        </field>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz_pool" model="ir.actions.act_window">
+        <field name="name">Question Pools</field>
+        <field name="res_model">otm.quiz.question.pool</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

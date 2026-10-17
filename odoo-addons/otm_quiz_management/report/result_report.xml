@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_attempt_result" model="ir.actions.report">
+        <field name="name">Quiz Result Summary</field>
+        <field name="model">otm.quiz.attempt</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">otm_quiz_management.report_attempt_result</field>
+        <field name="report_file">otm_quiz_management.report_attempt_result</field>
+        <field name="binding_model_id" ref="model_otm_quiz_attempt"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_attempt_result">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Quiz Result Summary</h2>
+                        <table class="table table-sm">
+                            <tr><th>Student</th><td><span t-field="o.student_id.name"/></td></tr>
+                            <tr><th>Quiz</th><td><span t-field="o.quiz_id.name"/></td></tr>
+                            <tr><th>Reference</th><td><span t-field="o.reference"/></td></tr>
+                            <tr><th>Attempt</th><td><span t-field="o.attempt_number"/></td></tr>
+                            <tr><th>Submitted</th><td><span t-field="o.submitted_at"/></td></tr>
+                            <tr><th>Marks</th><td><span t-field="o.marks_obtained"/> / <span t-field="o.total_marks"/></td></tr>
+                            <tr><th>Percentage</th><td><span t-field="o.percentage"/>%</td></tr>
+                            <tr><th>Result</th><td><span t-field="o.result_status"/></td></tr>
+                            <tr><th>Scholarship</th><td><span t-field="o.scholarship_status"/> <span t-field="o.scholarship_explanation"/></td></tr>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

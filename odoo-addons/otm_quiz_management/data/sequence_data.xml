@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="seq_quiz_code" model="ir.sequence">
+        <field name="name">Quiz Code</field>
+        <field name="code">otm.quiz.code</field>
+        <field name="prefix">QZ-</field>
+        <field name="padding">4</field>
+    </record>
+    <record id="seq_quiz_registration" model="ir.sequence">
+        <field name="name">Quiz Registration</field>
+        <field name="code">otm.quiz.registration</field>
+        <field name="prefix">REG/%(year)s/</field>
+        <field name="padding">5</field>
+    </record>
+    <record id="seq_quiz_attempt" model="ir.sequence">
+        <field name="name">Quiz Attempt</field>
+        <field name="code">otm.quiz.attempt</field>
+        <field name="prefix">ATT/%(year)s/</field>
+        <field name="padding">6</field>
+    </record>
+</odoo>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_import_wizard_form" model="ir.ui.view">
+        <field name="name">otm.quiz.import.wizard.form</field>
+        <field name="model">otm.quiz.import.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group invisible="state != 'draft'">
+                        <field name="file" filename="filename"/>
+                        <field name="filename" invisible="1"/>
+                        <field name="allow_duplicates"/>
+                    </group>
+                    <group invisible="state == 'draft'">
+                        <group>
+                            <field name="total_rows"/>
+                            <field name="valid_rows"/>
+                            <field name="invalid_rows"/>
+                            <field name="warning_rows"/>
+                        </group>
+                        <group>
+                            <field name="import_valid_only" invisible="state != 'validated'"/>
+                            <field name="imported_rows" invisible="state != 'done'"/>
+                        </group>
+                    </group>
+                    <field name="line_ids" invisible="state == 'draft'">
+                        <list create="0" edit="0" decoration-danger="status == 'invalid'" decoration-warning="status == 'warning'">
+                            <field name="row_number"/>
+                            <field name="status"/>
+                            <field name="question_text"/>
+                            <field name="message"/>
+                        </list>
+                    </field>
+                </sheet>
+                <footer>
+                    <button name="action_validate" type="object" string="Validate &amp; Preview" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_import" type="object" string="Import" class="btn-primary"
+                            invisible="state != 'validated'"/>
+                    <button name="action_download_error_report" type="object" string="Error Report"
+                            invisible="state == 'draft'"/>
+                    <button name="action_download_template" type="object" string="Download Template"/>
+                    <button string="Close" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz_import" model="ir.actions.act_window">
+        <field name="name">Import Questions</field>
+        <field name="res_model">otm.quiz.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

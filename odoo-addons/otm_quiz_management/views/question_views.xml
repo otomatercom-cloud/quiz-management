@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_question_list" model="ir.ui.view">
+        <field name="name">otm.quiz.question.list</field>
+        <field name="model">otm.quiz.question</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="action_archive_selected" type="object" string="Archive"/>
+                    <button name="action_activate_selected" type="object" string="Activate"/>
+                </header>
+                <field name="question_text"/>
+                <field name="question_type"/>
+                <field name="subject"/>
+                <field name="topic"/>
+                <field name="difficulty"/>
+                <field name="marks"/>
+                <field name="negative_marks" optional="show"/>
+                <field name="tag_ids" widget="many2many_tags" optional="hide"/>
+                <field name="usage_count"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_question_form" model="ir.ui.view">
+        <field name="name">otm.quiz.question.form</field>
+        <field name="model">otm.quiz.question</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <group>
+                        <group string="Question">
+                            <field name="question_text"/>
+                            <field name="question_type"/>
+                            <field name="difficulty"/>
+                            <field name="marks"/>
+                            <field name="negative_marks"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Classification">
+                            <field name="subject"/>
+                            <field name="topic"/>
+                            <field name="tag_ids" widget="many2many_tags" options="{'no_create_edit': True}"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="usage_count"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Answer Options" name="page_options" invisible="question_type == 'descriptive'">
+                            <field name="option_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="option_text"/>
+                                    <field name="is_correct"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Explanation / Image" name="page_extra">
+                            <group>
+                                <field name="explanation"/>
+                                <field name="image" widget="image" options="{'size': [0, 160]}"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_question_search" model="ir.ui.view">
+        <field name="name">otm.quiz.question.search</field>
+        <field name="model">otm.quiz.question</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="question_text"/>
+                <field name="subject"/>
+                <field name="topic"/>
+                <field name="tag_ids"/>
+                <filter name="f_mcq" string="MCQ" domain="[('question_type', '=', 'mcq')]"/>
+                <filter name="f_tf" string="True / False" domain="[('question_type', '=', 'true_false')]"/>
+                <filter name="f_easy" string="Easy" domain="[('difficulty', '=', 'easy')]"/>
+                <filter name="f_medium" string="Medium" domain="[('difficulty', '=', 'medium')]"/>
+                <filter name="f_hard" string="Hard" domain="[('difficulty', '=', 'hard')]"/>
+                <filter name="f_inactive" string="Archived" domain="[('active', '=', False)]"/>
+                <separator/>
+                <group>
+                    <filter name="g_subject" string="Subject" context="{'group_by': 'subject'}"/>
+                    <filter name="g_topic" string="Topic" context="{'group_by': 'topic'}"/>
+                    <filter name="g_difficulty" string="Difficulty" context="{'group_by': 'difficulty'}"/>
+                    <filter name="g_type" string="Type" context="{'group_by': 'question_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz_question" model="ir.actions.act_window">
+        <field name="name">Question Bank</field>
+        <field name="res_model">otm.quiz.question</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_otm_quiz_tag_list" model="ir.ui.view">
+        <field name="name">otm.quiz.tag.list</field>
+        <field name="model">otm.quiz.tag</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz_tag" model="ir.actions.act_window">
+        <field name="name">Question Tags</field>
+        <field name="res_model">otm.quiz.tag</field>
+        <field name="view_mode">list</field>
+    </record>
+</odoo>

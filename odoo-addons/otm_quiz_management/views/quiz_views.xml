@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_list" model="ir.ui.view">
+        <field name="name">otm.quiz.list</field>
+        <field name="model">otm.quiz</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'published'" decoration-muted="state in ('cancelled', 'archived')">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="subject"/>
+                <field name="quiz_start"/>
+                <field name="quiz_end"/>
+                <field name="duration_minutes"/>
+                <field name="total_marks"/>
+                <field name="registration_count"/>
+                <field name="completed_count"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_form" model="ir.ui.view">
+        <field name="name">otm.quiz.form</field>
+        <field name="model">otm.quiz</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_publish" type="object" string="Publish" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_close" type="object" string="Close" invisible="state != 'published'"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state not in ('draft', 'published')"
+                            confirm="Cancel this quiz?"/>
+                    <button name="action_reset_draft" type="object" string="Reset to Draft"
+                            invisible="state not in ('cancelled', 'published')"/>
+                    <button name="action_publish_results" type="object" string="Publish Results"
+                            invisible="state not in ('published', 'closed') or show_results_immediately or results_published"/>
+                    <button name="action_recalculate_scholarships" type="object" string="Recalculate Scholarships"
+                            invisible="not scholarship_enabled or state == 'draft'" groups="otm_quiz_management.group_otm_quiz_admin"/>
+                    <button name="action_archive_quiz" type="object" string="Archive" invisible="state in ('draft', 'archived')"
+                            groups="otm_quiz_management.group_otm_quiz_admin"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,published,closed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_registrations" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="registration_count" widget="statinfo" string="Registered"/>
+                        </button>
+                        <button name="action_view_attempts" type="object" class="oe_stat_button" icon="fa-pencil-square-o">
+                            <field name="started_count" widget="statinfo" string="Started"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Quiz title"/></h1>
+                        <field name="code" readonly="1"/>
+                    </div>
+                    <group invisible="not validation_errors" string="Publishing checklist">
+                        <field name="validation_errors" nolabel="1" colspan="2"/>
+                    </group>
+                    <notebook>
+                        <page string="Basics" name="page_basics">
+                            <group>
+                                <group>
+                                    <field name="subject"/>
+                                    <field name="description"/>
+                                    <field name="thumbnail" widget="image" options="{'size': [0, 120]}"/>
+                                </group>
+                                <group>
+                                    <field name="instructions"/>
+                                    <field name="evaluator_ids" widget="many2many_tags"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Registration" name="page_registration">
+                            <group>
+                                <group>
+                                    <field name="registration_required"/>
+                                    <field name="registration_start" invisible="not registration_required"/>
+                                    <field name="registration_end" invisible="not registration_required"/>
+                                    <field name="registration_limit" invisible="not registration_required"/>
+                                    <field name="allow_cancellation" invisible="not registration_required"/>
+                                </group>
+                                <group>
+                                    <field name="eligibility_notes"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Assessment" name="page_assessment">
+                            <group>
+                                <group string="Schedule">
+                                    <field name="quiz_start"/>
+                                    <field name="quiz_end"/>
+                                    <field name="duration_minutes"/>
+                                    <field name="grace_seconds"/>
+                                    <field name="maximum_attempts"/>
+                                </group>
+                                <group string="Scoring">
+                                    <field name="total_marks"/>
+                                    <field name="question_total"/>
+                                    <field name="passing_percentage"/>
+                                    <field name="negative_marking_enabled"/>
+                                    <field name="default_negative_marks" invisible="not negative_marking_enabled"/>
+                                    <field name="zero_floor"/>
+                                </group>
+                                <group string="Delivery">
+                                    <field name="randomize_questions"/>
+                                    <field name="randomize_options"/>
+                                </group>
+                                <group string="Results">
+                                    <field name="show_results_immediately"/>
+                                    <field name="results_published" invisible="show_results_immediately"/>
+                                    <field name="show_correct_answers_after_submission"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Questions" name="page_questions">
+                            <separator string="Fixed questions"/>
+                            <field name="fixed_question_ids">
+                                <list>
+                                    <field name="question_text"/>
+                                    <field name="question_type"/>
+                                    <field name="subject"/>
+                                    <field name="difficulty"/>
+                                    <field name="marks"/>
+                                </list>
+                            </field>
+                            <separator string="Random pools"/>
+                            <field name="question_pool_ids">
+                                <list>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="question_type"/>
+                                    <field name="subject"/>
+                                    <field name="topic"/>
+                                    <field name="difficulty"/>
+                                    <field name="questions_to_select"/>
+                                    <field name="marks_per_question"/>
+                                    <field name="eligible_count"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Scholarship" name="page_scholarship">
+                            <group>
+                                <field name="scholarship_enabled"/>
+                                <field name="course_fee" invisible="not scholarship_enabled"/>
+                            </group>
+                            <field name="scholarship_rule_ids" invisible="not scholarship_enabled">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="minimum_percentage"/>
+                                    <field name="maximum_percentage"/>
+                                    <field name="scholarship_type"/>
+                                    <field name="scholarship_value"/>
+                                    <field name="maximum_amount"/>
+                                    <field name="minimum_passing_required"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Statistics" name="page_stats">
+                            <group>
+                                <group>
+                                    <field name="registration_count"/>
+                                    <field name="confirmed_count"/>
+                                    <field name="cancelled_count"/>
+                                </group>
+                                <group>
+                                    <field name="started_count"/>
+                                    <field name="completed_count"/>
+                                    <field name="passed_count"/>
+                                    <field name="failed_count"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_search" model="ir.ui.view">
+        <field name="name">otm.quiz.search</field>
+        <field name="model">otm.quiz</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="subject"/>
+                <filter name="f_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="f_published" string="Published" domain="[('state', '=', 'published')]"/>
+                <filter name="f_closed" string="Closed" domain="[('state', '=', 'closed')]"/>
+                <filter name="f_inactive" string="Archived" domain="[('active', '=', False)]"/>
+                <separator/>
+                <group>
+                    <filter name="g_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="g_subject" string="Subject" context="{'group_by': 'subject'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz" model="ir.actions.act_window">
+        <field name="name">Quizzes</field>
+        <field name="res_model">otm.quiz</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

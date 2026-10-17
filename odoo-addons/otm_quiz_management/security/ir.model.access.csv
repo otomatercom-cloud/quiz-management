@@ -1,0 +1,23 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+acc_quiz_eval,quiz evaluator,model_otm_quiz,group_otm_quiz_evaluator,1,0,0,0
+acc_quiz_mgr,quiz manager,model_otm_quiz,group_otm_quiz_manager,1,1,1,0
+acc_quiz_adm,quiz admin,model_otm_quiz,group_otm_quiz_admin,1,1,1,1
+acc_question_eval,question evaluator,model_otm_quiz_question,group_otm_quiz_evaluator,1,0,0,0
+acc_question_mgr,question manager,model_otm_quiz_question,group_otm_quiz_manager,1,1,1,0
+acc_question_adm,question admin,model_otm_quiz_question,group_otm_quiz_admin,1,1,1,1
+acc_option_eval,option evaluator,model_otm_quiz_question_option,group_otm_quiz_evaluator,1,0,0,0
+acc_option_mgr,option manager,model_otm_quiz_question_option,group_otm_quiz_manager,1,1,1,1
+acc_pool_eval,pool evaluator,model_otm_quiz_question_pool,group_otm_quiz_evaluator,1,0,0,0
+acc_pool_mgr,pool manager,model_otm_quiz_question_pool,group_otm_quiz_manager,1,1,1,1
+acc_tag_eval,tag evaluator,model_otm_quiz_tag,group_otm_quiz_evaluator,1,0,0,0
+acc_tag_mgr,tag manager,model_otm_quiz_tag,group_otm_quiz_manager,1,1,1,1
+acc_rule_eval,scholarship rule evaluator,model_otm_quiz_scholarship_rule,group_otm_quiz_evaluator,1,0,0,0
+acc_rule_mgr,scholarship rule manager,model_otm_quiz_scholarship_rule,group_otm_quiz_manager,1,1,1,1
+acc_reg_mgr,registration manager,model_otm_quiz_registration,group_otm_quiz_manager,1,1,0,0
+acc_reg_adm,registration admin,model_otm_quiz_registration,group_otm_quiz_admin,1,1,1,0
+acc_attempt_eval,attempt evaluator,model_otm_quiz_attempt,group_otm_quiz_evaluator,1,0,0,0
+acc_answer_eval,answer evaluator,model_otm_quiz_attempt_answer,group_otm_quiz_evaluator,1,0,0,0
+acc_audit_adm,audit admin,model_otm_quiz_audit_log,group_otm_quiz_admin,1,0,0,0
+acc_import_mgr,import wizard manager,model_otm_quiz_import_wizard,group_otm_quiz_manager,1,1,1,1
+acc_import_line_mgr,import line manager,model_otm_quiz_import_line,group_otm_quiz_manager,1,1,1,1
+acc_quiz_api,quiz api service,model_otm_quiz,group_otm_quiz_api,1,0,0,0

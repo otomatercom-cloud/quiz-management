@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- multi-company questions -->
+    <record id="rule_question_company" model="ir.rule">
+        <field name="name">Quiz question: company</field>
+        <field name="model_id" ref="model_otm_quiz_question"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <!-- evaluators only see attempts / answers of quizzes they are assigned to -->
+    <record id="rule_attempt_evaluator" model="ir.rule">
+        <field name="name">Attempt: assigned evaluator</field>
+        <field name="model_id" ref="model_otm_quiz_attempt"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_evaluator'))]"/>
+        <field name="domain_force">[('quiz_id.evaluator_ids', 'in', [user.id])]</field>
+    </record>
+    <record id="rule_attempt_manager" model="ir.rule">
+        <field name="name">Attempt: managers see all</field>
+        <field name="model_id" ref="model_otm_quiz_attempt"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_manager'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+    <record id="rule_answer_evaluator" model="ir.rule">
+        <field name="name">Answer: assigned evaluator</field>
+        <field name="model_id" ref="model_otm_quiz_attempt_answer"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_evaluator'))]"/>
+        <field name="domain_force">[('attempt_id.quiz_id.evaluator_ids', 'in', [user.id])]</field>
+    </record>
+    <record id="rule_answer_manager" model="ir.rule">
+        <field name="name">Answer: managers see all</field>
+        <field name="model_id" ref="model_otm_quiz_attempt_answer"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_manager'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+    <!-- evaluators: only quizzes assigned to them -->
+    <record id="rule_quiz_evaluator" model="ir.rule">
+        <field name="name">Quiz: evaluator sees assigned</field>
+        <field name="model_id" ref="model_otm_quiz"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_evaluator'))]"/>
+        <field name="domain_force">[('evaluator_ids', 'in', [user.id])]</field>
+    </record>
+    <record id="rule_quiz_manager" model="ir.rule">
+        <field name="name">Quiz: managers see all</field>
+        <field name="model_id" ref="model_otm_quiz"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_manager')), (4, ref('group_otm_quiz_api'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+</odoo>

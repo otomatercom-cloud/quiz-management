@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-page text-ink antialiased; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  h1, h2, h3 { @apply text-ink; }
+  :focus-visible { @apply outline-none ring-2 ring-primary ring-offset-2; }
+}
+
+@layer components {
+  .card { @apply rounded-xl2 border border-slate-200 bg-white shadow-card; }
+  .input { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink placeholder:text-slate-400 focus:border-primary; }
+  .label { @apply mb-1 block text-sm font-medium text-ink; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60; }
+  .btn-primary { @apply btn bg-primary text-white hover:bg-blue-700; }
+  .btn-outline { @apply btn border border-slate-300 bg-white text-ink hover:bg-slate-50; }
+  .btn-danger { @apply btn bg-bad text-white hover:bg-red-700; }
+  .th { @apply whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted; }
+  .td { @apply px-4 py-3 text-sm; }
+}

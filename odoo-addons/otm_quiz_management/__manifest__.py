@@ -1,0 +1,27 @@
+# -*- coding: utf-8 -*-
+{
+    "name": "Otomater Quiz & Scholarship Management",
+    "version": "19.0.1.0.0",
+    "summary": "Question bank, timed quizzes, auto-evaluation and scholarship engine",
+    "author": "Otomater",
+    "website": "https://otomater.com",
+    "license": "OPL-1",
+    "category": "Customizations",
+    "depends": ["base", "mail"],
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "security/rules.xml",
+        "data/sequence_data.xml",
+        "data/cron_data.xml",
+        "views/question_views.xml",
+        "views/pool_views.xml",
+        "views/quiz_views.xml",
+        "views/registration_attempt_views.xml",
+        "views/import_wizard_views.xml",
+        "report/result_report.xml",
+        "views/menus.xml",
+    ],
+    "application": True,
+    "installable": True,
+}
