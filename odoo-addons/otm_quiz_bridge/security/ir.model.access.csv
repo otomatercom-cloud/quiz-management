@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+acc_bridge_assign_mgr,assign wizard manager,model_otm_quiz_assign_wizard,otm_quiz_management.group_otm_quiz_manager,1,1,1,1
+acc_bridge_lead_mgr,lead wizard manager,model_otm_quiz_lead_wizard,otm_quiz_management.group_otm_quiz_manager,1,1,1,1

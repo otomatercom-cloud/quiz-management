@@ -40,3 +40,9 @@ Percentage rounded half-up to 2 decimals; pass when `>=` threshold; unanswered =
 * 401/AccessDenied from API → wrong `ODOO_API_KEY`/user not in *Quiz API Service*.
 * "Database not found" → set `ODOO_DATABASE` / `X-Odoo-Database`.
 * Publish blocked → open the quiz; the red box lists exactly what to fix.
+
+## Bridge module `otm_quiz_bridge` (optional)
+Depends on `otm_quiz_management`, `student_details_19`, `custom_leads_19`.
+* **Assign to quiz** – Student Management: select students (list) or batches → Action → *Assign to Quiz* / *Assign Batch to Quiz*; or Quiz form → *Assign Students / Batches*. Students are approved immediately; a portal login is created from the student email if missing (setup link emailed). Students without a valid email are reported and skipped. Open quizzes (no registration) cannot be assigned.
+* **Convert to leads** – Quizzes → Registrations: select rows → Action → *Convert to Leads*, or Quiz form → *Convert Registrations to Leads* (all, optionally only attempted). Duplicates (same last-10-digit phone) are linked, not recreated; a registration converts once. Result summary lists failures.
+* Install: copy next to the other addons, `-i otm_quiz_bridge` (restart Odoo before installing/upgrading after adding files).

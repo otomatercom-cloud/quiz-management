@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_form_bridge" model="ir.ui.view">
+        <field name="name">otm.quiz.form.bridge</field>
+        <field name="model">otm.quiz</field>
+        <field name="inherit_id" ref="otm_quiz_management.view_otm_quiz_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(otm_quiz_bridge.action_otm_quiz_assign_wizard)d" type="action" string="Assign Students / Batches"
+                        invisible="state not in ('draft', 'published') or not registration_required"
+                        groups="otm_quiz_management.group_otm_quiz_manager"/>
+                <button name="%(otm_quiz_bridge.action_quiz_convert_all_to_leads)d" type="action" string="Convert Registrations to Leads"
+                        groups="otm_quiz_management.group_otm_quiz_manager"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_registration_list_bridge" model="ir.ui.view">
+        <field name="name">otm.quiz.registration.list.bridge</field>
+        <field name="model">otm.quiz.registration</field>
+        <field name="inherit_id" ref="otm_quiz_management.view_otm_quiz_registration_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state']" position="after">
+                <field name="student_detail_id" optional="show"/>
+                <field name="lead_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

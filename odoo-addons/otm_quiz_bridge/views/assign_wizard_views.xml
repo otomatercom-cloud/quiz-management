@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_assign_wizard_form" model="ir.ui.view">
+        <field name="name">otm.quiz.assign.wizard.form</field>
+        <field name="model">otm.quiz.assign.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <field name="state" invisible="1"/>
+                <group invisible="state == 'done'">
+                    <field name="quiz_id" options="{'no_create': True}"/>
+                    <field name="batch_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="student_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="student_count"/>
+                    <field name="send_setup_email"/>
+                </group>
+                <div class="text-muted" invisible="state == 'done'">
+                    Assigned students are approved immediately. A quiz login (portal account) is created from the
+                    student's email if it does not exist; students set their password from the emailed link or
+                    "Forgot password" on the quiz site. Students without an email are reported and skipped.
+                </div>
+                <group invisible="state != 'done'">
+                    <field name="result" nolabel="1" widget="text"/>
+                </group>
+                <footer>
+                    <button name="action_assign" type="object" string="Assign to Quiz" class="btn-primary"
+                            invisible="state == 'done'"/>
+                    <button string="Close" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz_assign_wizard" model="ir.actions.act_window">
+        <field name="name">Assign to Quiz</field>
+        <field name="res_model">otm.quiz.assign.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="action_assign_students_to_quiz" model="ir.actions.act_window">
+        <field name="name">Assign to Quiz</field>
+        <field name="res_model">otm.quiz.assign.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="student_details_19.model_student_details"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="group_ids" eval="[(4, ref('otm_quiz_management.group_otm_quiz_manager'))]"/>
+    </record>
+
+    <record id="action_assign_batches_to_quiz" model="ir.actions.act_window">
+        <field name="name">Assign Batch to Quiz</field>
+        <field name="res_model">otm.quiz.assign.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="student_details_19.model_student_batch"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="group_ids" eval="[(4, ref('otm_quiz_management.group_otm_quiz_manager'))]"/>
+    </record>
+</odoo>
