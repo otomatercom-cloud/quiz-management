@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="action_otm_quiz_students" model="ir.actions.act_window">
+        <field name="name">Students</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('otm_is_quiz_student', '=', True)]</field>
+        <field name="context">{'default_otm_is_quiz_student': True}</field>
+    </record>
     <menuitem id="menu_otm_quiz_root" name="Quizzes" sequence="60" web_icon="otm_quiz_management,static/description/icon.png"
               groups="otm_quiz_management.group_otm_quiz_evaluator"/>
     <menuitem id="menu_otm_quiz_quizzes" name="Quizzes" parent="menu_otm_quiz_root" action="action_otm_quiz" sequence="10"
@@ -12,6 +19,8 @@
     <menuitem id="menu_otm_quiz_import" name="Import Questions" parent="menu_otm_quiz_bank" action="action_otm_quiz_import" sequence="40"/>
     <menuitem id="menu_otm_quiz_registrations" name="Registrations" parent="menu_otm_quiz_root" action="action_otm_quiz_registration"
               sequence="30" groups="otm_quiz_management.group_otm_quiz_manager"/>
+    <menuitem id="menu_otm_quiz_students" name="Students" parent="menu_otm_quiz_root" action="action_otm_quiz_students"
+              sequence="35" groups="otm_quiz_management.group_otm_quiz_manager"/>
     <menuitem id="menu_otm_quiz_attempts" name="Attempts &amp; Results" parent="menu_otm_quiz_root" action="action_otm_quiz_attempt" sequence="40"/>
     <menuitem id="menu_otm_quiz_audit" name="Audit Log" parent="menu_otm_quiz_root" action="action_otm_quiz_audit" sequence="90"
               groups="otm_quiz_management.group_otm_quiz_admin"/>
