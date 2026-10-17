@@ -83,6 +83,7 @@ class OtmQuizApi(models.AbstractModel):
             "subject": q.subject or "", "state": q.state, "duration_minutes": q.duration_minutes,
             "total_marks": q.total_marks, "question_total": q.question_total, "passing_percentage": q.passing_percentage,
             "maximum_attempts": q.maximum_attempts, "registration_required": q.registration_required,
+            "approval_required": bool(q.registration_required and q.approval_required),
             "registration_start": _iso(q.registration_start), "registration_end": _iso(q.registration_end),
             "quiz_start": _iso(q.quiz_start), "quiz_end": _iso(q.quiz_end),
             "registration_open": q._registration_open(now), "window_open": q._window_open(now),
@@ -101,7 +102,7 @@ class OtmQuizApi(models.AbstractModel):
                 attempts_used=len(atts - running) + len(running),
                 active_attempt=running[:1].public_id or None,
                 can_start=bool(q._window_open(now) and (len(atts) < q.maximum_attempts or running) and
-                               (not q.registration_required or (reg and reg.state in ("registered", "confirmed")))),
+                               (not q.registration_required or (reg and reg.state in (("confirmed",) if q.approval_required else ("registered", "confirmed"))))),
             )
         return data
 

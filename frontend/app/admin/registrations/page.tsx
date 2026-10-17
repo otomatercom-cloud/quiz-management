@@ -22,16 +22,16 @@ export default async function Registrations({ searchParams }: { searchParams: Pr
     <>
       <PageHeader title="Registrations" />
       <SearchBar action="/admin/registrations" q={sp.q} placeholder="Student or quiz">
-        <select name="state" defaultValue={sp.state ?? ""} className="input max-w-40" aria-label="Status"><option value="">All</option>{["pending", "confirmed", "cancelled", "disqualified"].map((x) => <option key={x}>{x}</option>)}</select>
+        <select name="state" defaultValue={sp.state ?? ""} className="input max-w-40" aria-label="Status"><option value="">All</option>{["registered", "confirmed", "cancelled", "disqualified"].map((x) => <option key={x}>{x}</option>)}</select>
       </SearchBar>
       <DataTable head={["Ref", "Student", "Quiz", "Registered", "Status", "Actions"]} empty={!d.records.length}>
         {d.records.map((r) => (
           <tr key={r.id}><td className="td font-mono text-xs">{r.reference}</td><td className="td">{r.student_id[1]}</td><td className="td">{r.quiz_id[1]}</td>
             <td className="td text-xs">{fmtDateTime(odooDate(r.registration_date))}</td><td className="td"><Badge value={r.state} /></td>
             <td className="td"><div className="flex flex-wrap gap-1">
-              {r.state === "pending" && act(r.id, "action_confirm", "Confirm")}
-              {["pending", "confirmed"].includes(r.state) && act(r.id, "action_cancel", "Cancel", "Cancel this registration?")}
-              {r.state === "confirmed" && act(r.id, "action_disqualify", "Disqualify", "Disqualify this student? They cannot start the quiz.")}
+              {r.state === "registered" && act(r.id, "action_confirm", "Approve")}
+              {["registered", "confirmed"].includes(r.state) && act(r.id, "action_cancel", "Reject / cancel", "Reject this registration? The student will not be able to start the quiz.")}
+              {["registered", "confirmed"].includes(r.state) && act(r.id, "action_disqualify", "Disqualify", "Disqualify this student? They cannot start the quiz.")}
             </div></td></tr>
         ))}
       </DataTable>

@@ -89,6 +89,8 @@ class OtmQuizAttempt(models.Model):
                  ("state", "in", ("registered", "confirmed"))], limit=1)
             if not registration:
                 raise UserError("You are not registered for this quiz.")
+            if quiz.approval_required and registration.state != "confirmed":
+                raise UserError("Your registration is awaiting approval. You can start once it is approved.")
             if registration.eligibility_status != "eligible":
                 raise UserError("You are not eligible for this quiz.")
             registration.flush_recordset()

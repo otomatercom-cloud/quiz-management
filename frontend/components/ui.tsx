@@ -6,7 +6,7 @@ export const cn = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 const TONES: Record<string, string> = {
   pass: "bg-green-50 text-ok", published: "bg-green-50 text-ok", evaluated: "bg-green-50 text-ok",
   confirmed: "bg-green-50 text-ok", approved: "bg-green-50 text-ok", eligible: "bg-primary-light text-primary",
-  registered: "bg-primary-light text-primary", in_progress: "bg-primary-light text-primary",
+  registered: "bg-amber-50 text-warn", in_progress: "bg-primary-light text-primary",
   submitted: "bg-amber-50 text-warn", pending: "bg-amber-50 text-warn", expired: "bg-amber-50 text-warn",
   draft: "bg-slate-100 text-muted", closed: "bg-slate-100 text-muted", archived: "bg-slate-100 text-muted",
   not_applicable: "bg-slate-100 text-muted", not_eligible: "bg-slate-100 text-muted", not_started: "bg-slate-100 text-muted",

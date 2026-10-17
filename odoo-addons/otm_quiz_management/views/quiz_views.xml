@@ -74,6 +74,7 @@
                             <group>
                                 <group>
                                     <field name="registration_required"/>
+                                    <field name="approval_required" invisible="not registration_required"/>
                                     <field name="registration_start" invisible="not registration_required"/>
                                     <field name="registration_end" invisible="not registration_required"/>
                                     <field name="registration_limit" invisible="not registration_required"/>

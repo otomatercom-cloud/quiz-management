@@ -24,9 +24,9 @@ export function buildQuizVals(v: Values) {
     default_negative_marks: Number(v.default_negative_marks || 0), randomize_questions: !!v.randomize_questions,
     randomize_options: !!v.randomize_options, show_results_immediately: !!v.show_results_immediately,
     show_correct_answers_after_submission: !!v.show_correct_answers_after_submission,
-    registration_required: !!v.registration_required, registration_limit: Number(v.registration_limit || 0),
-    registration_start: v.registration_required && v.registration_start ? toOdooDatetime(v.registration_start) : false,
-    registration_end: v.registration_required && v.registration_end ? toOdooDatetime(v.registration_end) : false,
+    registration_required: v.access !== "open", approval_required: v.access === "approval", registration_limit: Number(v.registration_limit || 0),
+    registration_start: v.access !== "open" && v.registration_start ? toOdooDatetime(v.registration_start) : false,
+    registration_end: v.access !== "open" && v.registration_end ? toOdooDatetime(v.registration_end) : false,
     scholarship_enabled: !!v.scholarship_enabled, course_fee: Number(v.course_fee || 0),
   };
   return vals;
@@ -43,17 +43,17 @@ export function QuizWizard() {
   const { register, getValues, watch, setError: setFieldError, clearErrors, formState: { errors } } = useForm<Values>({
     defaultValues: {
       duration_minutes: 30, passing_percentage: 40, maximum_attempts: 1, randomize_questions: true, randomize_options: true,
-      show_results_immediately: true, registration_required: true, registration_limit: 0, default_negative_marks: 0,
+      show_results_immediately: true, access: "approval", registration_required: true, registration_limit: 0, default_negative_marks: 0,
       scholarship_enabled: false, course_fee: 0,
     },
   });
   const sch = watch("scholarship_enabled");
   const neg = watch("negative_marking_enabled");
-  const regReq = watch("registration_required");
+  const regReq = watch("access") !== "open";
 
   function validate(s: number): boolean {
     clearErrors();
-    const v = getValues();
+    const v = { ...getValues(), registration_required: getValues("access") !== "open" };
     let issues: { path: (string | number)[]; message: string }[] = [];
     if (s === 0) issues = quizBasicsSchema.safeParse(v).error?.issues ?? [];
     if (s === 1 || s === 2) {
@@ -106,7 +106,12 @@ export function QuizWizard() {
           <Field label="Instructions for students" hint="Blank line = new paragraph"><textarea className="input min-h-28" {...register("instructions")} /></Field>
         </>)}
         {step === 1 && (<>
-          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" {...register("registration_required")} /> Students must register first</label>
+          <fieldset className="space-y-2 text-sm">
+            <legend className="mb-1 font-medium">Who can attend?</legend>
+            <label className="flex items-start gap-2"><input type="radio" value="approval" className="mt-1" {...register("access")} /><span><strong>Registration with approval</strong><br /><span className="text-muted">Students register; they can start only after you approve their registration.</span></span></label>
+            <label className="flex items-start gap-2"><input type="radio" value="auto" className="mt-1" {...register("access")} /><span><strong>Registration, approved automatically</strong><br /><span className="text-muted">Students register and can start immediately when the quiz opens.</span></span></label>
+            <label className="flex items-start gap-2"><input type="radio" value="open" className="mt-1" {...register("access")} /><span><strong>Open quiz</strong><br /><span className="text-muted">No registration. Any signed-in student can start while the quiz is open.</span></span></label>
+          </fieldset>
           {regReq && (
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Registration opens" error={errors.registration_start?.message as string}><input type="datetime-local" className="input" {...register("registration_start")} /></Field>
@@ -167,7 +172,7 @@ export function QuizWizard() {
               <div><dt className="text-muted">Window</dt><dd>{v.quiz_start} → {v.quiz_end}</dd></div>
               <div><dt className="text-muted">Duration / pass mark</dt><dd>{v.duration_minutes} min · {v.passing_percentage}%</dd></div>
               <div><dt className="text-muted">Questions</dt><dd>{fixed.length} fixed + {pools.reduce((n, p) => n + p.questions_to_select, 0)} from {pools.length} pool(s)</dd></div>
-              <div><dt className="text-muted">Registration</dt><dd>{v.registration_required ? `${v.registration_start} → ${v.registration_end}` : "Not required"}</dd></div>
+              <div><dt className="text-muted">Registration</dt><dd>{v.access === "open" ? "Open quiz — no registration" : `${v.access === "approval" ? "With approval" : "Auto-approved"}: ${v.registration_start} → ${v.registration_end}`}</dd></div>
               <div><dt className="text-muted">Scholarship</dt><dd>{v.scholarship_enabled ? `${rules.length} rule(s)` : "Disabled"}</dd></div>
             </dl>
             <Alert tone="info">Publishing is blocked automatically when the configuration is invalid (e.g. a pool needing more questions than exist). You can also save as a draft and finish later.</Alert>

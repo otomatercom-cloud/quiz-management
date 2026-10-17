@@ -54,7 +54,10 @@ class OtmQuizRegistration(models.Model):
 
     # ---- workflow
     def action_confirm(self):
-        self.filtered(lambda r: r.state == "registered").write({"state": "confirmed"})
+        regs = self.filtered(lambda r: r.state == "registered")
+        regs.write({"state": "confirmed"})
+        if regs:
+            self.env["otm.quiz.audit.log"].log("registration_approved", regs[:1])
 
     def action_cancel(self):
         for rec in self:
@@ -86,7 +89,8 @@ class OtmQuizRegistration(models.Model):
             taken = self.sudo().search_count([("quiz_id", "=", quiz.id), ("state", "in", ACTIVE_STATES)])
             if taken >= quiz.registration_limit:
                 raise UserError("Registration limit reached.")
-        reg = self.sudo().create({"quiz_id": quiz.id, "student_id": partner.id, "state": "confirmed"})
+        reg = self.sudo().create({"quiz_id": quiz.id, "student_id": partner.id,
+                                  "state": "registered" if quiz.approval_required else "confirmed"})
         return reg
 
     def cancel_by_student(self):

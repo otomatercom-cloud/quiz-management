@@ -22,9 +22,9 @@ export function QuizCardView({ q, href }: { q: QuizCard; href: string }) {
         <h3 className="line-clamp-2 text-lg font-semibold">{q.title}</h3>
         <p className="text-sm text-muted">{fmtDateTime(q.quiz_start)} · {q.duration_minutes} min · {q.total_marks} marks</p>
         <div className="flex items-center gap-2">
-          <Badge value={q.registration_status ?? (q.window_open ? "published" : "draft")} label={q.registration_status ?? (q.window_open ? "Open now" : "Upcoming")} />
+          <Badge value={q.registration_status ?? (q.window_open ? "published" : "draft")} label={q.registration_status === "registered" && q.approval_required ? "Awaiting approval" : q.registration_status ?? (q.window_open ? "Open now" : "Upcoming")} />
           <span className={cn("text-xs", q.registration_open ? "text-ok" : "text-muted")}>
-            {q.registration_required ? (q.registration_open ? "Registration open" : "Registration closed") : "No registration needed"}
+            {q.registration_required ? ((q.registration_open ? "Registration open" : "Registration closed") + (q.approval_required ? " · approval needed" : "")) : "Open to everyone — no registration"}
           </span>
         </div>
       </div>

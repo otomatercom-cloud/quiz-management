@@ -27,7 +27,7 @@ export default async function StudentQuizzes({ searchParams }: { searchParams: P
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-semibold">{q.title}</h2>
-                    {q.registration_status && <Badge value={q.registration_status} />}
+                    {q.registration_status && <Badge value={q.registration_status} label={q.registration_status === "registered" && q.approval_required ? "Awaiting approval" : undefined} />}
                     {q.scholarship_enabled && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-warn">Scholarship</span>}
                   </div>
                   <p className="mt-1 text-sm text-muted">{fmtDateTime(q.quiz_start)} → {fmtDateTime(q.quiz_end)} · {q.duration_minutes} min · {q.total_marks} marks · pass {q.passing_percentage}%</p>
@@ -36,7 +36,7 @@ export default async function StudentQuizzes({ searchParams }: { searchParams: P
                 <div>
                   {q.can_start ? <StartQuizButton quizId={q.id} duration={q.duration_minutes} resume={!!q.active_attempt} />
                     : q.registration_required && !registered ? <RegisterQuizButton quizId={q.id} open={q.registration_open} required />
-                    : <span className="text-sm text-muted">{registered ? "Registered — opens at start time" : "Not available"}</span>}
+                    : <span className="text-sm text-muted">{registered ? (q.approval_required && q.registration_status === "registered" ? "Registered — waiting for admin approval" : "Registered — you can start when the quiz opens") : "Not available"}</span>}
                 </div>
               </article>
             );

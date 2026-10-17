@@ -11,7 +11,7 @@ export const metadata = { title: "Quiz" };
 type Q = {
   id: number; public_id: string; name: string; code: string | false; state: string; subject: string | false; quiz_start: string | false; quiz_end: string | false;
   duration_minutes: number; passing_percentage: number; maximum_attempts: number; total_marks: number; validation_errors: string | false;
-  registration_count: number; completed_count: number; passed_count: number; failed_count: number; results_published: boolean;
+  registration_count: number; registration_required: boolean; approval_required: boolean; completed_count: number; passed_count: number; failed_count: number; results_published: boolean;
   show_results_immediately: boolean; scholarship_enabled: boolean; fixed_question_ids: number[]; question_pool_ids: number[]; scholarship_rule_ids: number[];
 };
 
@@ -23,7 +23,7 @@ export default async function QuizDetail({ params }: { params: Promise<{ id: str
     const r = await adminSearch<Q>(s.userId, "otm.quiz", {
       domain: [["public_id", "=", id]], limit: 1,
       fields: ["public_id", "name", "code", "state", "subject", "quiz_start", "quiz_end", "duration_minutes", "passing_percentage", "maximum_attempts", "total_marks", "validation_errors",
-        "registration_count", "completed_count", "passed_count", "failed_count", "results_published", "show_results_immediately", "scholarship_enabled", "fixed_question_ids", "question_pool_ids", "scholarship_rule_ids"],
+        "registration_count", "registration_required", "approval_required", "completed_count", "passed_count", "failed_count", "results_published", "show_results_immediately", "scholarship_enabled", "fixed_question_ids", "question_pool_ids", "scholarship_rule_ids"],
     });
     q = r.records[0];
   } catch (e) { return <ErrorPanel error={e} />; }
@@ -55,6 +55,7 @@ export default async function QuizDetail({ params }: { params: Promise<{ id: str
       <section className="card mt-6 grid gap-3 p-5 text-sm sm:grid-cols-2">
         <p><span className="text-muted">Starts:</span> {fmtDateTime(odooDate(q.quiz_start || null))}</p>
         <p><span className="text-muted">Ends:</span> {fmtDateTime(odooDate(q.quiz_end || null))}</p>
+        <p><span className="text-muted">Access:</span> {!q.registration_required ? "Open quiz (no registration)" : q.approval_required ? "Registration with admin approval" : "Registration, auto-approved"}</p>
         <p><span className="text-muted">Duration:</span> {q.duration_minutes} min</p>
         <p><span className="text-muted">Attempts allowed:</span> {q.maximum_attempts}</p>
         <p><span className="text-muted">Fixed questions:</span> {q.fixed_question_ids.length}</p>

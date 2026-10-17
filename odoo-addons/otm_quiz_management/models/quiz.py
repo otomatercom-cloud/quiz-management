@@ -10,7 +10,7 @@ from odoo.tools import float_compare
 PROTECTED_FIELDS = {
     "duration_minutes", "passing_percentage", "negative_marking_enabled", "default_negative_marks",
     "maximum_attempts", "fixed_question_ids", "randomize_questions", "randomize_options", "zero_floor",
-    "registration_required", "quiz_start", "quiz_end", "grace_seconds",
+    "registration_required", "approval_required", "quiz_start", "quiz_end", "grace_seconds",
 }
 
 
@@ -43,6 +43,10 @@ class OtmQuiz(models.Model):
     active = fields.Boolean(default=True)
     # registration
     registration_required = fields.Boolean(default=True)
+    approval_required = fields.Boolean(
+        string="Admin Approval Required", default=False,
+        help="Students register first and can start the quiz only after a manager approves the registration. "
+             "Without it, registration is approved automatically. Ignored when registration is not required (open quiz).")
     registration_start = fields.Datetime()
     registration_end = fields.Datetime()
     registration_limit = fields.Integer(help="0 = unlimited")

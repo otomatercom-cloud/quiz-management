@@ -144,6 +144,26 @@ class TestQuiz(TransactionCase):
         with self.assertRaises(UserError):
             self.env["otm.quiz.attempt"].start_for(quiz, self.student)
 
+    def test_approval_required_blocks_start_until_approved(self):
+        quiz = self.quiz([self.mcq("a")], approval_required=True)
+        Reg = self.env["otm.quiz.registration"]
+        reg = Reg.register(quiz, self.student)
+        self.assertEqual(reg.state, "registered")
+        with self.assertRaises(UserError):
+            self.env["otm.quiz.attempt"].start_for(quiz, self.student)
+        card = self.api._quiz_card(quiz, self.student)
+        self.assertFalse(card["can_start"])
+        reg.action_confirm()
+        self.assertEqual(reg.state, "confirmed")
+        self.assertTrue(self.api._quiz_card(quiz, self.student)["can_start"])
+        self.assertTrue(self.env["otm.quiz.attempt"].start_for(quiz, self.student))
+
+    def test_auto_approved_and_open_quiz(self):
+        quiz = self.quiz([self.mcq("a")])
+        self.assertEqual(self.env["otm.quiz.registration"].register(quiz, self.student).state, "confirmed")
+        open_quiz = self.quiz([self.mcq("b")], registration_required=False)
+        self.assertTrue(self.env["otm.quiz.attempt"].start_for(open_quiz, self.student))
+
     def test_registration_idempotent_and_unique(self):
         quiz = self.quiz([self.mcq("a")])
         Reg = self.env["otm.quiz.registration"]

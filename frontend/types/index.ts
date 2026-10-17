@@ -3,7 +3,7 @@ export type Paged<T> = { total: number; items: T[] };
 export type QuizCard = {
   id: string; slug: string; title: string; code: string; description: string; subject: string; state: string;
   duration_minutes: number; total_marks: number; question_total: number; passing_percentage: number;
-  maximum_attempts: number; registration_required: boolean; registration_start: string | null;
+  maximum_attempts: number; registration_required: boolean; approval_required: boolean; registration_start: string | null;
   registration_end: string | null; quiz_start: string | null; quiz_end: string | null; registration_open: boolean;
   window_open: boolean; scholarship_enabled: boolean; eligibility_notes: string; negative_marking: boolean;
   has_thumbnail: boolean;
