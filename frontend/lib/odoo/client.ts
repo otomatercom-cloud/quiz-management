@@ -69,8 +69,11 @@ export async function odooCall<T>(
       }
       if (res.ok) return json as T;
       last = mapOdooFailure(res.status, json as { name?: string; message?: string } | null);
+      const b = json as { name?: string; message?: string } | null;
+      console.error(`[odoo] ${method} HTTP ${res.status} ${b?.name ?? ""} ${(b?.message ?? text).slice(0, 300)}`); // params never logged
       if (res.status < 500) break; // client errors are final
     } catch (e) {
+      console.error(`[odoo] ${method} fetch error: ${(e as Error).message} ${((e as { cause?: Error }).cause?.message) ?? ""}`);
       last = new OdooError(
         (e as Error).name === "AbortError" ? "The service timed out. Please try again." : "Cannot reach the service.",
         504,
