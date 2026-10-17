@@ -16,7 +16,7 @@ Student/staff identity is verified by `student_login` / `admin_login`; admin cal
 ## Install – Frontend
 ```
 cd frontend && cp .env.example .env.local   # fill ODOO_BASE_URL, ODOO_DATABASE, ODOO_USERNAME, ODOO_API_KEY, SESSION_SECRET (>=32 random chars), NEXT_PUBLIC_APP_URL
-npm ci && npm run build && npm start
+npm ci && npm run build && npm start   # serves on port 3007
 ```
 Tests: `npm test`, `npx tsc --noEmit`.
 
