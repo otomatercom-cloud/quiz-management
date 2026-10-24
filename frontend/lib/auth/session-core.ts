@@ -33,8 +33,15 @@ export async function verifySession(token: string | undefined, secret: string | 
   return null;
 }
 
-/** admin > manager > evaluator */
-export function hasRole(roles: string[], needed: "admin" | "manager" | "evaluator"): boolean {
+export type StaffRole = "admin" | "manager" | "evaluator" | "teacher" | "staff";
+
+/**
+ * admin > manager > evaluator. "teacher" (question author) is a separate branch: managers and admins can do
+ * everything a teacher can, evaluators cannot. "staff" means any quiz role. Odoo enforces the real ACLs again.
+ */
+export function hasRole(roles: string[], needed: StaffRole): boolean {
+  if (needed === "staff") return roles.some((r) => ["admin", "manager", "evaluator", "teacher"].includes(r));
+  if (needed === "teacher") return roles.some((r) => ["admin", "manager", "teacher"].includes(r));
   const rank = { evaluator: 1, manager: 2, admin: 3 } as const;
   return roles.some((r) => (rank[r as keyof typeof rank] ?? 0) >= rank[needed]);
 }

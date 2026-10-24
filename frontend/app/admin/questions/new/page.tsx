@@ -4,6 +4,6 @@ import { requireStaff } from "@/lib/auth/session";
 
 export const metadata = { title: "New question" };
 export default async function NewQuestion() {
-  await requireStaff("manager");
+  await requireStaff("teacher");
   return (<><PageHeader title="New question" /><QuestionForm initial={blankQuestion} /></>);
 }

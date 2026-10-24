@@ -53,7 +53,7 @@ class OtmQuizQuestion(models.Model):
                 [("question_id", "in", self.ids)], ["question_id"], ["__count"])
             counts = {q.id: c for q, c in groups}
         for rec in self:
-            rec.usage_count = len(rec.quiz_ids) + counts.get(rec.id, 0)
+            rec.usage_count = len(rec.sudo().quiz_ids) + counts.get(rec.id, 0)
 
     @api.constrains("marks", "negative_marks")
     def _check_marks(self):
@@ -85,7 +85,7 @@ class OtmQuizQuestion(models.Model):
     @api.ondelete(at_uninstall=False)
     def _unlink_if_unused(self):
         used = self.env["otm.quiz.attempt.answer"].sudo().search_count([("question_id", "in", self.ids)])
-        if used or any(q.quiz_ids for q in self):
+        if used or any(q.sudo().quiz_ids for q in self):
             raise UserError("This question is used by quizzes or past attempts. Archive it instead.")
 
     def action_archive_selected(self):

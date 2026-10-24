@@ -32,16 +32,30 @@ export function buildQuizVals(v: Values) {
   return vals;
 }
 
-export function QuizWizard() {
+export type WizardInitial = {
+  id: number; publicId: string; state: string; values: Values; fixed: number[];
+  pools: (PoolDraft & { id: number })[]; rules: (RuleDraft & { id: number })[];
+};
+
+/** Odoo x2many commands: remove what the user deleted, create what is new, leave the rest untouched. */
+export function x2many<T extends { id?: number }>(current: T[], originalIds: number[]) {
+  const keep = new Set(current.map((c) => c.id).filter((i): i is number => !!i));
+  return [
+    ...originalIds.filter((i) => !keep.has(i)).map((i) => [2, i, 0]),
+    ...current.filter((c) => !c.id).map(({ id: _id, ...rest }) => [0, 0, rest]), // eslint-disable-line @typescript-eslint/no-unused-vars
+  ];
+}
+
+export function QuizWizard({ initial }: { initial?: WizardInitial }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [fixed, setFixed] = useState<number[]>([]);
-  const [pools, setPools] = useState<PoolDraft[]>([]);
-  const [rules, setRules] = useState<RuleDraft[]>([]);
+  const [fixed, setFixed] = useState<number[]>(initial?.fixed ?? []);
+  const [pools, setPools] = useState<(PoolDraft & { id?: number })[]>(initial?.pools ?? []);
+  const [rules, setRules] = useState<(RuleDraft & { id?: number })[]>(initial?.rules ?? []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { register, getValues, watch, setError: setFieldError, clearErrors, formState: { errors } } = useForm<Values>({
-    defaultValues: {
+    defaultValues: initial?.values ?? {
       duration_minutes: 30, passing_percentage: 40, maximum_attempts: 1, randomize_questions: true, randomize_options: true,
       show_results_immediately: true, access: "approval", registration_required: true, registration_limit: 0, default_negative_marks: 0,
       scholarship_enabled: false, course_fee: 0,
@@ -70,11 +84,25 @@ export function QuizWizard() {
     setBusy(true); setError(null);
     try {
       const v = getValues();
+      const full = buildQuizVals(v);
+      if (initial) {
+        // edit mode: send only what changed (structure fields are locked by Odoo once students have attempted)
+        const before = buildQuizVals(initial.values);
+        const vals: Values = Object.fromEntries(Object.entries(full).filter(([k, val]) => JSON.stringify(val) !== JSON.stringify(before[k])));
+        if (JSON.stringify([...fixed].sort()) !== JSON.stringify([...initial.fixed].sort())) vals.fixed_question_ids = [[6, 0, fixed]];
+        const pc = x2many(pools, initial.pools.map((p) => p.id));
+        if (pc.length) vals.question_pool_ids = pc;
+        if (v.scholarship_enabled) { const rc = x2many(rules, initial.rules.map((r) => r.id)); if (rc.length) vals.scholarship_rule_ids = rc; }
+        if (Object.keys(vals).length) await postJson("/api/admin/write", { model: "otm.quiz", ids: [initial.id], vals });
+        if (publish) await postJson("/api/admin/call", { model: "otm.quiz", ids: [initial.id], method: "action_publish" });
+        router.push(`/admin/quizzes/${initial.publicId}`); router.refresh();
+        return;
+      }
       const vals = {
-        ...buildQuizVals(v),
+        ...full,
         fixed_question_ids: [[6, 0, fixed]],
-        question_pool_ids: pools.map((p) => [0, 0, { ...p }]),
-        scholarship_rule_ids: v.scholarship_enabled ? rules.map((r) => [0, 0, { ...r }]) : [],
+        question_pool_ids: x2many(pools, []),
+        scholarship_rule_ids: v.scholarship_enabled ? x2many(rules, []) : [],
       };
       const id = await postJson<number>("/api/admin/create", { model: "otm.quiz", vals });
       const rec = await postJson<{ records: { public_id: string }[] }>("/api/admin/search", { model: "otm.quiz", domain: [["id", "=", id]], fields: ["public_id"], limit: 1 });
@@ -183,8 +211,8 @@ export function QuizWizard() {
         <button className="btn-outline" disabled={step === 0 || busy} onClick={() => setStep(step - 1)}>Back</button>
         {step < STEPS.length - 1 ? <button className="btn-primary" onClick={next}>Continue</button> : (
           <div className="flex gap-2">
-            <button className="btn-outline" disabled={busy} onClick={() => void save(false)}>Save as draft</button>
-            <button className="btn-primary" disabled={busy} onClick={() => void save(true)}>{busy ? "Working…" : "Create & publish"}</button>
+            <button className={initial && initial.state !== "draft" ? "btn-primary" : "btn-outline"} disabled={busy} onClick={() => void save(false)}>{initial ? "Save changes" : "Save as draft"}</button>
+            {(!initial || initial.state === "draft") && <button className="btn-primary" disabled={busy} onClick={() => void save(true)}>{busy ? "Working…" : initial ? "Save & publish" : "Create & publish"}</button>}
           </div>
         )}
       </div>

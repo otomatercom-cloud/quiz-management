@@ -21,3 +21,8 @@ acc_audit_adm,audit admin,model_otm_quiz_audit_log,group_otm_quiz_admin,1,0,0,0
 acc_import_mgr,import wizard manager,model_otm_quiz_import_wizard,group_otm_quiz_manager,1,1,1,1
 acc_import_line_mgr,import line manager,model_otm_quiz_import_line,group_otm_quiz_manager,1,1,1,1
 acc_quiz_api,quiz api service,model_otm_quiz,group_otm_quiz_api,1,0,0,0
+acc_question_teacher,question teacher,model_otm_quiz_question,group_otm_quiz_teacher,1,1,1,1
+acc_option_teacher,option teacher,model_otm_quiz_question_option,group_otm_quiz_teacher,1,1,1,1
+acc_tag_teacher,tag teacher,model_otm_quiz_tag,group_otm_quiz_teacher,1,0,1,0
+acc_import_teacher,import wizard teacher,model_otm_quiz_import_wizard,group_otm_quiz_teacher,1,1,1,1
+acc_import_line_teacher,import line teacher,model_otm_quiz_import_line,group_otm_quiz_teacher,1,1,1,1

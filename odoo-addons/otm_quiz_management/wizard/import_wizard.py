@@ -151,7 +151,7 @@ class OtmQuizImportWizard(models.TransientModel):
             digest = hashlib.sha1(("%s|%s" % (qtype, normalize_text(text))).encode()).hexdigest()
             if digest in seen:
                 (warns if allow_dup else errs).append("Duplicate of row %d in this file." % seen[digest])
-            elif self.env["otm.quiz.question"].search_count([("content_hash", "=", digest)]):
+            elif self.env["otm.quiz.question"].sudo().search_count([("content_hash", "=", digest)]):
                 (warns if allow_dup else errs).append("A question with identical text already exists in the bank.")
         payload = None
         if not errs:

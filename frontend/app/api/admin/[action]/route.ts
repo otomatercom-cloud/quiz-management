@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { odooCall } from "@/lib/odoo/client";
 import { getStaff } from "@/lib/auth/session";
-import { hasRole } from "@/lib/auth/session-core";
+import { hasRole, type StaffRole } from "@/lib/auth/session-core";
 import { assertSameOrigin, fail, limit, toResponse } from "@/lib/http";
 import { adminCallSchema, adminCreateSchema, adminSearchSchema, adminWriteSchema, ADMIN_MODELS } from "@/lib/validation/schemas";
 
@@ -12,11 +12,14 @@ const importSchema = z.object({
   mode: z.enum(["validate", "import"]).default("validate"),
   allow_duplicates: z.boolean().default(false),
 });
+const teacherCreateSchema = z.object({ name: z.string().trim().min(2).max(120), email: z.string().trim().email().max(254), password: z.string().max(128).optional().default("") });
+const teacherActiveSchema = z.object({ user_id: z.number().int().positive(), active: z.boolean() });
 const deleteSchema = z.object({ model: z.enum(ADMIN_MODELS), ids: z.array(z.number().int().positive()).min(1).max(100) });
 
 // minimum role per action; Odoo enforces the real ACLs again with the acting user's own permissions
-const ROLE: Record<string, "evaluator" | "manager" | "admin"> = {
-  search: "evaluator", create: "manager", write: "manager", delete: "manager", call: "evaluator", import: "manager",
+const ROLE: Record<string, StaffRole> = {
+  search: "staff", create: "teacher", write: "teacher", delete: "teacher", call: "staff", import: "teacher",
+  teachers: "admin", "teacher-create": "admin", "teacher-active": "admin",
 };
 
 export async function POST(req: Request, ctx: { params: Promise<{ action: string }> }) {
@@ -38,6 +41,9 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
       case "write": data = await odooCall("admin_write", { acting_user_id, ...adminWriteSchema.parse(body) }); break;
       case "delete": data = await odooCall("admin_delete", { acting_user_id, ...deleteSchema.parse(body) }); break;
       case "call": data = await odooCall("admin_call", { acting_user_id, ...adminCallSchema.parse(body) }); break;
+      case "teachers": data = await odooCall("admin_teachers", { acting_user_id }); break;
+      case "teacher-create": data = await odooCall("admin_create_teacher", { acting_user_id, ...teacherCreateSchema.parse(body) }); break;
+      case "teacher-active": data = await odooCall("admin_set_teacher_active", { acting_user_id, ...teacherActiveSchema.parse(body) }); break;
       case "import": data = await odooCall("admin_import", { acting_user_id, ...importSchema.parse(body) }, { timeoutMs: 120_000 }); break;
     }
     return NextResponse.json({ ok: true, data });

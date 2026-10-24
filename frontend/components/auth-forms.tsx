@@ -57,7 +57,7 @@ export function LoginForm() {
       try {
         await postJson(staff ? "/api/auth/staff-login" : "/api/auth/login", v);
         const next = params.get("next");
-        router.push(staff ? "/admin/dashboard" : next && next.startsWith("/student") ? next : "/student/dashboard");
+        router.push(staff ? "/admin" : next && next.startsWith("/student") ? next : "/student/dashboard");
         router.refresh();
       } catch (e) { setError((e as Error).message); }
     })}>

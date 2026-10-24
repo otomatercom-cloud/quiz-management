@@ -37,10 +37,11 @@ export default async function QuizDetail({ params }: { params: Promise<{ id: str
     ? (await adminSearch<{ id: number; name: string; minimum_percentage: number; scholarship_value: number; scholarship_type: string; sequence: number }>(s.userId, "otm.quiz.scholarship.rule", { domain: [["id", "in", q.scholarship_rule_ids]], fields: ["name", "minimum_percentage", "scholarship_value", "scholarship_type", "sequence"], order: "sequence" }).catch(() => ({ records: [] }))).records : [];
   return (
     <>
-      <PageHeader title={q.name} subtitle={`${q.code || ""} ${q.subject || ""}`.trim()} actions={<><Badge value={q.state} /><ButtonLink href={`/admin/reports?quiz=${q.public_id}`} variant="outline">Report</ButtonLink></>} />
+      <PageHeader title={q.name} subtitle={`${q.code || ""} ${q.subject || ""}`.trim()} actions={<><Badge value={q.state} /><ButtonLink href={`/admin/quizzes/${q.public_id}/edit`} variant="outline">Edit</ButtonLink><ButtonLink href={`/admin/reports?quiz=${q.public_id}`} variant="outline">Report</ButtonLink></>} />
       {q.validation_errors && q.state === "draft" && <Alert tone="warning"><strong>Fix before publishing:</strong><pre className="mt-1 whitespace-pre-wrap font-sans text-sm">{q.validation_errors}</pre></Alert>}
       <div className="my-4 flex flex-wrap gap-2">
         {q.state === "draft" && call("action_publish", "Publish", { variant: "primary" })}
+        {q.state === "draft" && <ActionButton url="/api/admin/delete" body={{ model: "otm.quiz", ids: [q.id] }} label="Delete draft" variant="danger" confirm="Delete this draft quiz permanently?" onDoneHref="/admin/quizzes" />}
         {q.state === "published" && call("action_close", "Close quiz", { confirm: "Students will no longer be able to start or continue attempts after closing." })}
         {["draft", "published"].includes(q.state) && call("action_cancel", "Cancel quiz", { variant: "danger", confirm: "Cancel this quiz? Registrations will stay but the quiz becomes unavailable." })}
         {q.state === "closed" && !q.show_results_immediately && !q.results_published && call("action_publish_results", "Publish results", { variant: "primary" })}

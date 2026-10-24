@@ -6,6 +6,7 @@ The BFF authenticates with a dedicated service user (API key). Student / staff i
 ownership / role on the server; admin methods execute with the acting user's own ACLs and record rules.
 """
 import re
+import secrets
 from datetime import timedelta
 
 import logging
@@ -19,10 +20,12 @@ _logger = logging.getLogger(__name__)
 G_ADMIN = "otm_quiz_management.group_otm_quiz_admin"
 G_MANAGER = "otm_quiz_management.group_otm_quiz_manager"
 G_EVAL = "otm_quiz_management.group_otm_quiz_evaluator"
+G_TEACHER = "otm_quiz_management.group_otm_quiz_teacher"
+G_QBANK = (G_MANAGER, G_TEACHER)  # question bank: managers and teachers (teachers: own questions only, via record rule)
 
 ADMIN_MODELS = {
-    "otm.quiz": G_MANAGER, "otm.quiz.question": G_MANAGER, "otm.quiz.question.option": G_MANAGER, "otm.quiz.question.pool": G_MANAGER,
-    "otm.quiz.scholarship.rule": G_MANAGER, "otm.quiz.registration": G_MANAGER, "otm.quiz.tag": G_MANAGER,
+    "otm.quiz": G_MANAGER, "otm.quiz.question": G_QBANK, "otm.quiz.question.option": G_QBANK, "otm.quiz.question.pool": G_MANAGER,
+    "otm.quiz.scholarship.rule": G_MANAGER, "otm.quiz.registration": G_MANAGER, "otm.quiz.tag": G_QBANK,
     "otm.quiz.attempt": G_EVAL, "otm.quiz.attempt.answer": G_EVAL, "otm.quiz.audit.log": G_ADMIN,
 }
 ADMIN_WRITABLE = {"otm.quiz", "otm.quiz.question", "otm.quiz.question.pool", "otm.quiz.scholarship.rule",
@@ -72,7 +75,8 @@ class OtmQuizApi(models.AbstractModel):
 
     def _acting(self, acting_user_id, group):
         user = self.env["res.users"].sudo().browse(int(acting_user_id or 0)).exists()
-        if not user or not user.active or user.share or not user.has_group(group):
+        groups = (group,) if isinstance(group, str) else group
+        if not user or not user.active or user.share or not any(user.has_group(g) for g in groups):
             raise AccessError("Not allowed.")
         return self.env(user=user.id)
 
@@ -377,10 +381,81 @@ class OtmQuizApi(models.AbstractModel):
         user = self.env["res.users"].sudo().search([("login", "=", (login or "").strip())], limit=1)
         if not user or not user.active or user.share or not self._check_password(user, password or ""):
             raise AccessDenied("Invalid credentials.")
-        roles = [r for r, g in (("admin", G_ADMIN), ("manager", G_MANAGER), ("evaluator", G_EVAL)) if user.has_group(g)]
+        roles = [r for r, g in (("admin", G_ADMIN), ("manager", G_MANAGER), ("evaluator", G_EVAL), ("teacher", G_TEACHER)) if user.has_group(g)]
         if not roles:
             raise AccessDenied("This account has no quiz role.")
         return {"user_id": user.id, "name": user.name, "roles": roles}
+
+    # ---- teacher management (administrators only)
+    def _teacher_payload(self, u):
+        return {"id": u.id, "name": u.name, "login": u.login, "email": u.email or "", "active": u.active,
+                "questions": self.env["otm.quiz.question"].sudo().with_context(active_test=False).search_count(
+                    [("create_uid", "=", u.id)])}
+
+    @api.model
+    def admin_teachers(self, acting_user_id):
+        self._acting(acting_user_id, G_ADMIN)
+        group = self.env.ref(G_TEACHER).sudo()
+        users = self.env["res.users"].sudo().with_context(active_test=False).search(
+            [("group_ids", "in", group.id), ("share", "=", False)], order="name")
+        return [self._teacher_payload(u) for u in users]
+
+    @api.model
+    def admin_create_teacher(self, acting_user_id, name, email, password=""):
+        """Create a teacher login (or grant the teacher role to an existing internal user). Never changes other groups."""
+        self._acting(acting_user_id, G_ADMIN)
+        name, email = (name or "").strip(), (email or "").strip().lower()
+        if len(name) < 2:
+            raise UserError("Please enter the teacher's name.")
+        if not EMAIL_RE.match(email):
+            raise UserError("Please enter a valid email address.")
+        Users = self.env["res.users"].sudo()
+        group = self.env.ref(G_TEACHER).sudo()
+        user = Users.with_context(active_test=False).search([("login", "=", email)], limit=1)
+        if user:
+            if user.share:
+                raise UserError("This email belongs to a student account. Use another email for the teacher.")
+            if not user.active:
+                raise UserError("This login is archived. Restore it in Odoo first.")
+            user.write({"group_ids": [(4, group.id)]})
+            created = False
+        else:
+            if password and len(password) < 8:
+                raise UserError("Password must have at least 8 characters.")
+            user = Users.with_context(no_reset_password=True).create({
+                "name": name, "login": email, "email": email,
+                "password": password or secrets.token_urlsafe(18),
+                "group_ids": [(6, 0, [group.id])],
+            })
+            created = True
+            if not password:
+                try:
+                    user.action_reset_password()  # emails a password-setup link
+                except Exception:  # noqa: BLE001 - mail not configured; admin can set a password instead
+                    _logger.warning("Teacher setup email could not be sent", exc_info=True)
+        self.env["otm.quiz.audit.log"].log("teacher_added", None, "user=%s created=%s" % (user.login, created))
+        return dict(self._teacher_payload(user), created=created, emailed=bool(created and not password))
+
+    @api.model
+    def admin_set_teacher_active(self, acting_user_id, user_id, active):
+        self._acting(acting_user_id, G_ADMIN)
+        user = self.env["res.users"].sudo().with_context(active_test=False).browse(int(user_id)).exists()
+        group = self.env.ref(G_TEACHER).sudo()
+        if not user or group not in user.group_ids:
+            raise UserError("Teacher not found.")
+        if user.id == int(acting_user_id):
+            raise UserError("You cannot deactivate your own account.")
+        if active:
+            user.write({"active": True})
+        else:
+            # only the teacher role is removed when the account also has other quiz roles; otherwise archive the login
+            other = any(user.has_group(g) for g in (G_ADMIN, G_MANAGER, G_EVAL))
+            if other:
+                user.write({"group_ids": [(3, group.id)]})
+            else:
+                user.write({"active": False})
+        self.env["otm.quiz.audit.log"].log("teacher_active_changed", None, "user=%s active=%s" % (user.login, bool(active)))
+        return True
 
     def _admin_check(self, acting_user_id, model):
         if model not in ADMIN_MODELS:
@@ -425,17 +500,17 @@ class OtmQuizApi(models.AbstractModel):
 
     @api.model
     def admin_import(self, acting_user_id, filename, content_b64, mode="validate", allow_duplicates=False):
-        env = self._acting(acting_user_id, G_MANAGER)
+        env = self._acting(acting_user_id, G_QBANK)
         return env["otm.quiz.import.wizard"].api_run(filename, content_b64, mode, allow_duplicates)
 
     @api.model
     def admin_import_template(self, acting_user_id):
-        env = self._acting(acting_user_id, G_MANAGER)
+        env = self._acting(acting_user_id, G_QBANK)
         return env["otm.quiz.import.wizard"].template_csv()
 
     @api.model
     def admin_export_questions(self, acting_user_id, include_answers=False, domain=None):
-        env = self._acting(acting_user_id, G_ADMIN if include_answers else G_MANAGER)
+        env = self._acting(acting_user_id, G_ADMIN if include_answers else G_QBANK)
         return env["otm.quiz.import.wizard"].export_csv(include_answers, domain or [])
 
     @api.model

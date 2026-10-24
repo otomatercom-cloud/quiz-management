@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge, DataTable, ErrorPanel, PageHeader, Pagination, SearchBar } from "@/components/ui";
 import { requireStaff } from "@/lib/auth/session";
 import { fmtDateTime, fmtPct, odooDate } from "@/lib/format";
@@ -23,7 +24,7 @@ export default async function Attempts({ searchParams }: { searchParams: Promise
       </SearchBar>
       <DataTable head={["Ref", "Student", "Quiz", "Started", "Status", "Score", "Result"]} empty={!d.records.length}>
         {d.records.map((a) => (
-          <tr key={a.id}><td className="td font-mono text-xs">{a.reference}</td><td className="td">{a.student_id[1]}</td><td className="td">{a.quiz_id[1]}</td>
+          <tr key={a.id}><td className="td font-mono text-xs"><Link className="text-primary" href={`/admin/attempts/${a.id}`}>{a.reference}</Link></td><td className="td">{a.student_id[1]}</td><td className="td">{a.quiz_id[1]}</td>
             <td className="td text-xs">{fmtDateTime(odooDate(a.started_at))}</td><td className="td"><Badge value={a.state} />{a.late_submission && <span className="ml-1 text-xs text-warn">late</span>}</td>
             <td className="td">{a.marks_obtained}/{a.total_marks} ({fmtPct(a.percentage)})</td><td className="td"><Badge value={a.result_status} /></td></tr>
         ))}

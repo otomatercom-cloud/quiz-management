@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   STAFF_COOKIE, STUDENT_COOKIE, SESSION_TTL_SECONDS, hasRole, signSession, verifySession,
-  type Session, type StaffSession, type StudentSession,
+  type Session, type StaffRole, type StaffSession, type StudentSession,
 } from "./session-core";
 
 const secret = () => process.env.SESSION_SECRET;
@@ -40,7 +40,7 @@ export async function requireStudent(): Promise<StudentSession> {
   return s;
 }
 
-export async function requireStaff(role: "admin" | "manager" | "evaluator" = "manager"): Promise<StaffSession> {
+export async function requireStaff(role: StaffRole = "manager"): Promise<StaffSession> {
   const s = await getStaff();
   if (!s) redirect("/login?staff=1");
   if (!hasRole(s.roles, role)) redirect("/unauthorized");

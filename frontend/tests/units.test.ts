@@ -4,6 +4,7 @@ import { enqueue, selectOption, statusOf, summarize, type Question } from "@/lib
 import { rateLimit, resetRateLimits } from "@/lib/rate-limit";
 import { hasRole, signSession, verifySession } from "@/lib/auth/session-core";
 import { adminCallSchema, adminSearchSchema, quizSettingsSchema, scholarshipRuleSchema } from "@/lib/validation/schemas";
+import { x2many, buildQuizVals } from "@/components/quiz-wizard";
 import { odooToLocalInput, toOdooDatetime } from "@/lib/format";
 
 const q = (o: Partial<Question> = {}): Question => ({ seq: 1, type: "mcq", text: "t", marks: 1, options: [{ id: 1, text: "a" }, { id: 2, text: "b" }], selected: [], text_answer: "", marked: false, ...o });
@@ -63,6 +64,15 @@ describe("session", () => {
     expect(await verifySession(t, "y".repeat(40))).toBeNull();
     expect(await verifySession(undefined, secret)).toBeNull();
   });
+  it("teacher role is its own branch", () => {
+    expect(hasRole(["teacher"], "teacher")).toBe(true);
+    expect(hasRole(["teacher"], "manager")).toBe(false);
+    expect(hasRole(["teacher"], "evaluator")).toBe(false);
+    expect(hasRole(["teacher"], "staff")).toBe(true);
+    expect(hasRole(["manager"], "teacher")).toBe(true);
+    expect(hasRole(["admin"], "teacher")).toBe(true);
+    expect(hasRole(["evaluator"], "teacher")).toBe(false);
+  });
   it("role hierarchy", () => {
     expect(hasRole(["admin"], "manager")).toBe(true);
     expect(hasRole(["evaluator"], "manager")).toBe(false);
@@ -91,5 +101,18 @@ describe("date helpers", () => {
   it("round-trips local input <-> Odoo UTC", () => {
     const local = "2026-03-05T14:30";
     expect(odooToLocalInput(toOdooDatetime(local))).toBe(local);
+  });
+});
+
+describe("quiz edit helpers", () => {
+  it("x2many: removes deleted, creates new, leaves existing untouched", () => {
+    const cmds = x2many([{ id: 1, name: "keep" }, { name: "new" }] as { id?: number; name: string }[], [1, 2]);
+    expect(cmds).toEqual([[2, 2, 0], [0, 0, { name: "new" }]]);
+  });
+  it("buildQuizVals is stable so unchanged fields can be diffed away", () => {
+    const v = { name: "Q", quiz_start: "2026-03-05T10:00", quiz_end: "2026-03-06T10:00", duration_minutes: "30", passing_percentage: "40", maximum_attempts: "1", access: "open", instructions: "a\n\nb" };
+    expect(JSON.stringify(buildQuizVals(v))).toBe(JSON.stringify(buildQuizVals({ ...v })));
+    expect(buildQuizVals(v).registration_required).toBe(false);
+    expect(buildQuizVals({ ...v, access: "approval" }).approval_required).toBe(true);
   });
 });

@@ -7,11 +7,11 @@ import { Field, postJson } from "@/components/forms";
 export type QOption = { id?: number; option_text: string; is_correct: boolean };
 export type QDraft = {
   id?: number; question_text: string; question_type: string; subject: string; topic: string; difficulty: string;
-  marks: number; negative_marks: number; explanation: string; options: QOption[]; locked?: boolean;
+  marks: number; negative_marks: number; explanation: string; options: QOption[]; locked?: boolean; tags: string;
 };
 
 export const blankQuestion: QDraft = {
-  question_text: "", question_type: "mcq", subject: "", topic: "", difficulty: "medium", marks: 1, negative_marks: 0, explanation: "",
+  question_text: "", question_type: "mcq", subject: "", topic: "", difficulty: "medium", marks: 1, negative_marks: 0, explanation: "", tags: "",
   options: [{ option_text: "", is_correct: true }, { option_text: "", is_correct: false }, { option_text: "", is_correct: false }, { option_text: "", is_correct: false }],
 };
 
@@ -21,6 +21,7 @@ export function QuestionForm({ initial }: { initial: QDraft }) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = <K extends keyof QDraft>(k: K, v: QDraft[K]) => setQ((x) => ({ ...x, [k]: v }));
+  const [image, setImage] = useState<string | null | undefined>(undefined); // undefined = unchanged, null = remove
   const scored = q.question_type === "mcq" || q.question_type === "true_false";
 
   function setType(t: string) {
@@ -31,6 +32,25 @@ export function QuestionForm({ initial }: { initial: QDraft }) {
   }
   const setOpt = (i: number, patch: Partial<QOption>) => set("options", q.options.map((o, j) => (j === i ? { ...o, ...patch } : o)));
   const markCorrect = (i: number) => set("options", q.options.map((o, j) => ({ ...o, is_correct: j === i })));
+
+  async function pickImage(file: File | undefined) {
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) return setErr("Image must be PNG, JPG, WEBP or GIF.");
+    if (file.size > 1024 * 1024) return setErr("Image must be 1 MB or smaller.");
+    const buf = new Uint8Array(await file.arrayBuffer());
+    let bin = ""; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    setErr(null); setImage(btoa(bin));
+  }
+
+  async function tagIds(): Promise<number[]> {
+    const names = [...new Set(q.tags.split(",").map((t) => t.trim()).filter(Boolean))].slice(0, 20);
+    const ids: number[] = [];
+    for (const name of names) {
+      const found = await postJson<{ records: { id: number }[] }>("/api/admin/search", { model: "otm.quiz.tag", domain: [["name", "=ilike", name]], fields: ["id"], limit: 1 });
+      ids.push(found.records[0]?.id ?? (await postJson<number>("/api/admin/create", { model: "otm.quiz.tag", vals: { name } })));
+    }
+    return ids;
+  }
 
   async function save() {
     setErr(null);
@@ -45,7 +65,9 @@ export function QuestionForm({ initial }: { initial: QDraft }) {
       const vals: Record<string, unknown> = {
         question_text: q.question_text, question_type: q.question_type, subject: q.subject || false, topic: q.topic || false,
         difficulty: q.difficulty, marks: q.marks, negative_marks: q.negative_marks, explanation: q.explanation || false,
+        tag_ids: [[6, 0, await tagIds()]],
       };
+      if (image !== undefined) vals.image = image ?? false;
       if (!q.locked) {
         const opts = scored ? q.options.filter((o) => o.option_text.trim()) : [];
         vals.option_ids = [[5, 0, 0], ...opts.map((o) => [0, 0, { option_text: o.option_text, is_correct: o.is_correct }])];
@@ -84,6 +106,15 @@ export function QuestionForm({ initial }: { initial: QDraft }) {
           {q.question_type === "mcq" && q.options.length < 8 && <button type="button" className="btn-outline" onClick={() => set("options", [...q.options, { option_text: "", is_correct: false }])}>Add option</button>}
         </fieldset>
       )}
+      <Field label="Tags" hint="Comma separated, e.g. algebra, chapter 3"><input className="input" value={q.tags} onChange={(e) => set("tags", e.target.value)} /></Field>
+      <Field label="Question image (optional, max 1 MB)">
+        <div className="space-y-2">
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => void pickImage(e.target.files?.[0])} aria-label="Question image" />
+          {image && <p className="text-xs text-ok">New image selected. <button type="button" className="text-bad" onClick={() => setImage(undefined)}>Undo</button></p>}
+          {q.id && image === undefined && <button type="button" className="text-xs text-bad" onClick={() => setImage(null)}>Remove existing image on save</button>}
+          {image === null && <p className="text-xs text-warn">Image will be removed. <button type="button" className="text-primary" onClick={() => setImage(undefined)}>Undo</button></p>}
+        </div>
+      </Field>
       <Field label="Explanation (shown after submission if allowed)"><textarea className="input" value={q.explanation} onChange={(e) => set("explanation", e.target.value)} /></Field>
       <div className="flex gap-2"><button className="btn-primary" disabled={busy} onClick={() => void save()}>{busy ? "Saving…" : "Save question"}</button>
         <button className="btn-outline" onClick={() => router.back()}>Cancel</button></div>

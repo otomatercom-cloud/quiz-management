@@ -45,4 +45,30 @@
         <field name="groups" eval="[(4, ref('group_otm_quiz_manager')), (4, ref('group_otm_quiz_api'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
     </record>
+
+    <!-- teachers only see and edit the questions they authored; managers see all -->
+    <record id="rule_question_teacher" model="ir.rule">
+        <field name="name">Question: teacher sees own</field>
+        <field name="model_id" ref="model_otm_quiz_question"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_teacher'))]"/>
+        <field name="domain_force">[('create_uid', '=', user.id)]</field>
+    </record>
+    <record id="rule_question_manager" model="ir.rule">
+        <field name="name">Question: managers see all</field>
+        <field name="model_id" ref="model_otm_quiz_question"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_manager')), (4, ref('group_otm_quiz_api'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+    <record id="rule_option_teacher" model="ir.rule">
+        <field name="name">Question option: teacher sees own</field>
+        <field name="model_id" ref="model_otm_quiz_question_option"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_teacher'))]"/>
+        <field name="domain_force">[('question_id.create_uid', '=', user.id)]</field>
+    </record>
+    <record id="rule_option_manager" model="ir.rule">
+        <field name="name">Question option: managers see all</field>
+        <field name="model_id" ref="model_otm_quiz_question_option"/>
+        <field name="groups" eval="[(4, ref('group_otm_quiz_manager')), (4, ref('group_otm_quiz_api'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
 </odoo>

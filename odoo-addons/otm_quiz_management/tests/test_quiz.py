@@ -373,3 +373,53 @@ class TestQuiz(TransactionCase):
         self.assertEqual(rep["ranking"][0]["rank"], 1)
         html = self.env["ir.actions.report"]._render_qweb_html("otm_quiz_management.action_report_attempt_result", att.ids)
         self.assertIn(b"Test Student", html[0])
+
+    # ---------------------------------------------------------------- teachers
+    def _teacher(self, email="t1@example.com"):
+        admin = self.env.ref("base.user_admin")
+        res = self.api.admin_create_teacher(admin.id, "Teacher One", email, "password123")
+        return admin, res
+
+    def test_teacher_sees_and_edits_only_own_questions(self):
+        admin, t1 = self._teacher()
+        _, t2 = self._teacher("t2@example.com")
+        vals = {"question_text": "Teacher Q", "question_type": "mcq", "marks": 1,
+                "option_ids": [(0, 0, {"option_text": "x", "is_correct": True}), (0, 0, {"option_text": "y"})]}
+        qid = self.api.admin_create(t1["id"], "otm.quiz.question", vals)
+        self.mcq("Manager Q")  # authored by another user
+        mine = self.api.admin_search_read(t1["id"], "otm.quiz.question", fields=["question_text"])
+        self.assertEqual([r["question_text"] for r in mine["records"]], ["Teacher Q"])
+        self.assertEqual(self.api.admin_search_read(t2["id"], "otm.quiz.question")["total"], 0)
+        with self.assertRaises(AccessError):  # another teacher cannot change it
+            self.api.admin_write(t2["id"], "otm.quiz.question", [qid], {"marks": 5})
+        self.api.admin_write(t1["id"], "otm.quiz.question", [qid], {"marks": 3})
+        allq = self.api.admin_search_read(admin.id, "otm.quiz.question", domain=[("question_text", "=", "Teacher Q")],
+                                         fields=["marks", "create_uid"])
+        self.assertEqual(allq["records"][0]["create_uid"][0], t1["id"])
+        self.assertEqual(allq["records"][0]["marks"], 3)
+
+    def test_teacher_cannot_touch_quizzes_or_admin_functions(self):
+        _, t1 = self._teacher()
+        with self.assertRaises(AccessError):
+            self.api.admin_create(t1["id"], "otm.quiz", {"name": "Nope"})
+        with self.assertRaises(AccessError):
+            self.api.admin_search_read(t1["id"], "otm.quiz.attempt")
+        with self.assertRaises(AccessError):
+            self.api.admin_teachers(t1["id"])
+        with self.assertRaises(AccessError):
+            self.api.admin_export_questions(t1["id"], include_answers=True)
+        self.assertTrue(self.api.admin_import_template(t1["id"])["csv"])  # allowed
+        self.assertIn("teacher", self.api.admin_login("t1@example.com", "password123")["roles"])
+
+    def test_teacher_import_and_deactivate(self):
+        admin, t1 = self._teacher()
+        csv_text = ("question_text,question_type,option_a,option_b,option_c,option_d,correct_answer,marks\n"
+                    "Capital of India?,mcq,Delhi,Mumbai,Kolkata,Chennai,A,1\n")
+        res = self.api.admin_import(t1["id"], "q.csv", base64.b64encode(csv_text.encode()).decode(), "import")
+        self.assertEqual(res["imported"], 1)
+        own = self.api.admin_search_read(t1["id"], "otm.quiz.question")
+        self.assertEqual(own["total"], 1)
+        self.assertEqual([t["id"] for t in self.api.admin_teachers(admin.id)], [t1["id"]])
+        self.api.admin_set_teacher_active(admin.id, t1["id"], False)
+        with self.assertRaises(AccessError):
+            self.api.admin_search_read(t1["id"], "otm.quiz.question")
