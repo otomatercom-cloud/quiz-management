@@ -28,6 +28,9 @@ export function buildQuizVals(v: Values) {
     registration_start: v.access !== "open" && v.registration_start ? toOdooDatetime(v.registration_start) : false,
     registration_end: v.access !== "open" && v.registration_end ? toOdooDatetime(v.registration_end) : false,
     allow_guest: v.access === "open" && !!v.allow_guest,
+    integrity_mode: v.integrity_mode || "off", max_violations: Number(v.max_violations || 3),
+    require_seb: !!v.require_seb, seb_config_key: v.require_seb ? String(v.seb_config_key ?? "").trim() : false,
+    allow_calculator: !!v.allow_calculator, allow_spreadsheet: !!v.allow_spreadsheet,
     scholarship_enabled: !!v.scholarship_enabled, course_fee: Number(v.course_fee || 0),
   };
   return vals;
@@ -60,11 +63,14 @@ export function QuizWizard({ initial }: { initial?: WizardInitial }) {
       duration_minutes: 30, passing_percentage: 40, maximum_attempts: 1, randomize_questions: true, randomize_options: true,
       show_results_immediately: true, access: "approval", registration_required: true, registration_limit: 0, default_negative_marks: 0,
       scholarship_enabled: false, course_fee: 0,
+      integrity_mode: "off", max_violations: 3,
     },
   });
   const sch = watch("scholarship_enabled");
   const neg = watch("negative_marking_enabled");
   const regReq = watch("access") !== "open";
+  const integ = watch("integrity_mode");
+  const seb = watch("require_seb");
 
   function validate(s: number): boolean {
     clearErrors();
@@ -169,6 +175,27 @@ export function QuizWizard({ initial }: { initial?: WizardInitial }) {
             <label className="flex items-center gap-2"><input type="checkbox" {...register("show_results_immediately")} /> Show results immediately</label>
             <label className="flex items-center gap-2"><input type="checkbox" {...register("show_correct_answers_after_submission")} /> Show correct answers after submission</label>
           </div>
+          <fieldset className="space-y-3 rounded-lg border border-slate-200 p-4 text-sm">
+            <legend className="px-1 font-semibold">Exam integrity</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">Monitoring
+                <select className="input mt-1" {...register("integrity_mode")}>
+                  <option value="off">Off</option>
+                  <option value="warn">Warn and log only</option>
+                  <option value="strict">Strict: auto-submit after too many violations</option>
+                </select></label>
+              {integ === "strict" && <label className="block">Warnings before auto-submit
+                <input type="number" min={1} max={20} className="input mt-1" {...register("max_violations")} /></label>}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex items-center gap-2"><input type="checkbox" {...register("allow_calculator")} /> Built-in calculator</label>
+              <label className="flex items-center gap-2"><input type="checkbox" {...register("allow_spreadsheet")} /> Built-in spreadsheet (formulas)</label>
+              <label className="flex items-center gap-2 sm:col-span-2"><input type="checkbox" {...register("require_seb")} /> Require Safe Exam Browser</label>
+            </div>
+            {seb && <label className="block">SEB Config Key (64 hex characters, from the SEB Config Tool)
+              <input className="input mt-1 font-mono" maxLength={64} autoComplete="off" {...register("seb_config_key")} /></label>}
+            <p className="text-xs text-muted">Monitoring records tab switches, window changes and leaving full screen. Safe Exam Browser locks the computer to the exam; it must be installed on the students&apos; computers.</p>
+          </fieldset>
           <p className="text-sm text-muted">Total marks are calculated from the questions you select. MCQ and true/false are evaluated automatically.</p>
         </>)}
         {step === 3 && (<>

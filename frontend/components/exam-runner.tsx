@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExamTools } from "@/components/exam-tools";
 import { postJson, ConfirmDialog } from "@/components/forms";
 import { Alert, cn } from "@/components/ui";
 import { clockOffsetMs, formatClock, remainingMs } from "@/lib/timer";
@@ -13,11 +14,20 @@ type Props = {
   deadlineAt: string;
   serverNow: string;
   questions: Question[];
+  integrity?: Integrity;
+  inSeb?: boolean;
 };
+export type Integrity = { mode: "off" | "warn" | "strict"; max: number; count: number; calculator: boolean; spreadsheet: boolean };
 type SaveState = "saved" | "saving" | "offline" | "error";
 type Receipt = { reference: string; submitted_at: string; late: boolean; result_visible: boolean; quiz_title: string };
 
-export function ExamRunner({ attemptId, title, deadlineAt, serverNow, questions: initial }: Props) {
+const VIOLATION_KINDS = ["blur", "hidden", "fullscreen_exit"] as const;
+
+export function ExamRunner({ attemptId, title, deadlineAt, serverNow, questions: initial, integrity, inSeb }: Props) {
+  const watching = !!integrity && integrity.mode !== "off";
+  const [started, setStarted] = useState(!watching); // watched exams begin with a click (fullscreen needs a user gesture)
+  const [strikes, setStrikes] = useState(integrity?.count ?? 0);
+  const [warning, setWarning] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>(initial);
   const [index, setIndex] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("saved");
@@ -102,6 +112,40 @@ export function ExamRunner({ attemptId, title, deadlineAt, serverNow, questions:
     return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
   }, [flush]);
 
+  // integrity watcher: reports focus loss / tab switch / leaving fullscreen; the server counts and may auto-submit
+  useEffect(() => {
+    if (!watching || !started) return;
+    let wasFullscreen = !!document.fullscreenElement;
+    let last = 0;
+    const report = (kind: string) => {
+      const now = Date.now();
+      if (kind !== "paste" && now - last < 1500) return; // blur + visibilitychange fire together
+      if (kind !== "paste") last = now;
+      postJson<{ count: number; max: number; terminated: boolean }>("/api/student/log_event", { attempt_public_id: attemptId, kind })
+        .then((r) => {
+          setStrikes(r.count);
+          if (r.terminated) { setWarning(null); void submit(); }
+          else if (kind !== "paste" && integrity!.mode === "strict") setWarning(`Warning ${r.count} of ${r.max}: leaving the exam window is recorded. The quiz is submitted automatically at ${r.max}.`);
+          else if (kind !== "paste") setWarning("Leaving the exam window has been recorded for review.");
+        })
+        .catch(() => undefined); // a failed report must never disturb the exam
+    };
+    const onVis = () => { if (document.visibilityState === "hidden") report("hidden"); };
+    const onBlur = () => report("blur");
+    const onFs = () => { if (wasFullscreen && !document.fullscreenElement) report("fullscreen_exit"); wasFullscreen = !!document.fullscreenElement; };
+    const onPaste = (e: Event) => { e.preventDefault(); report("paste"); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", onBlur);
+    document.addEventListener("fullscreenchange", onFs);
+    document.addEventListener("paste", onPaste);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", onBlur);
+      document.removeEventListener("fullscreenchange", onFs);
+      document.removeEventListener("paste", onPaste);
+    };
+  }, [watching, started, attemptId, integrity, submit]);
+
   const q = questions[index];
   const sum = useMemo(() => summarize(questions), [questions]);
 
@@ -142,8 +186,25 @@ export function ExamRunner({ attemptId, title, deadlineAt, serverNow, questions:
   }
 
   const low = left < 60_000;
+  if (watching && !started) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-lg items-center px-4">
+        <div className="card w-full space-y-4 p-8">
+          <h1 className="text-xl font-bold">{title}</h1>
+          <Alert tone="warning">
+            This exam is monitored. Switching tabs or windows, or leaving full screen, is recorded
+            {integrity!.mode === "strict" ? ` and the quiz is submitted automatically after ${integrity!.max} warnings` : " for your teacher to review"}. Pasting is disabled.
+            {(integrity!.calculator || integrity!.spreadsheet) && " A calculator/spreadsheet is available inside the exam."}
+          </Alert>
+          <button className="btn-primary w-full" onClick={() => { if (!inSeb) void document.documentElement.requestFullscreen?.().catch(() => undefined); setStarted(true); }}>
+            {inSeb ? "Start the exam" : "Start the exam in full screen"}
+          </button>
+        </div>
+      </main>
+    );
+  }
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-page" onCopy={watching ? (e) => e.preventDefault() : undefined}>
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0"><p className="truncate font-semibold">{title}</p>
@@ -214,6 +275,16 @@ export function ExamRunner({ attemptId, title, deadlineAt, serverNow, questions:
         </aside>
       </main>
 
+      <ExamTools calculator={!!integrity?.calculator} spreadsheet={!!integrity?.spreadsheet} attemptId={attemptId} />
+      {watching && strikes > 0 && !warning && <div className="fixed left-4 top-16 z-20 rounded-lg bg-amber-50 px-3 py-1 text-xs text-warn">Warnings: {strikes}{integrity!.mode === "strict" ? ` / ${integrity!.max}` : ""}</div>}
+      {warning && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" role="alertdialog" aria-label="Exam warning">
+          <div className="card max-w-md space-y-4 p-6">
+            <p className="font-semibold text-bad">{warning}</p>
+            <button className="btn-primary w-full" onClick={() => { setWarning(null); if (!inSeb && !document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => undefined); }}>Return to exam</button>
+          </div>
+        </div>
+      )}
       {confirming && (
         <ConfirmDialog title="Submit your quiz?" busy={submitting} error={error} confirmLabel="Submit now"
           text={`You answered ${sum.answered} of ${sum.total} questions${sum.marked ? `, ${sum.marked} marked for review` : ""}${sum.unanswered ? `, and ${sum.unanswered} are unanswered` : ""}. You cannot change answers after submitting.`}

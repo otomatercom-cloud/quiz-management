@@ -93,6 +93,16 @@
                                     <field name="quiz_end"/>
                                     <field name="duration_minutes"/>
                                     <field name="grace_seconds"/>
+                                </group>
+                                <group string="Exam integrity">
+                                    <field name="integrity_mode"/>
+                                    <field name="max_violations" invisible="integrity_mode != 'strict'"/>
+                                    <field name="require_seb"/>
+                                    <field name="seb_config_key" invisible="not require_seb" required="require_seb"/>
+                                    <field name="allow_calculator"/>
+                                    <field name="allow_spreadsheet"/>
+                                </group>
+                                <group string="Attempts">
                                     <field name="maximum_attempts"/>
                                 </group>
                                 <group string="Scoring">

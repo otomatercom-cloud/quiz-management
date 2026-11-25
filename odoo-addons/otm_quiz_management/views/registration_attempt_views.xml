@@ -130,8 +130,21 @@
                             <field name="scholarship_overridden"/>
                             <field name="scholarship_explanation"/>
                         </group>
+                        <group string="Integrity">
+                            <field name="violation_count"/>
+                            <field name="terminated_reason"/>
+                        </group>
                     </group>
                     <notebook>
+                        <page string="Integrity events" name="page_events">
+                            <field name="event_ids">
+                                <list>
+                                    <field name="at"/>
+                                    <field name="kind"/>
+                                    <field name="counted"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Answers" name="page_answers">
                             <field name="answer_ids">
                                 <list>

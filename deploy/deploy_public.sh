@@ -29,6 +29,6 @@ grep -q '^TURNSTILE_SECRET_KEY=' "$APP/frontend/.env" || echo "WARN: no TURNSTIL
 cd "$APP/frontend"
 npm ci --no-audit --no-fund
 npm run build
-pm2 restart otm-quiz-frontend --update-env
-pm2 logs otm-quiz-frontend --err --lines 5 --nostream
+pm2 restart quiz-frontend --update-env
+pm2 logs quiz-frontend --err --lines 5 --nostream
 echo "Done. Test: open an open quiz in a private window (guest card), then Settings > Technical > Parameters: otm_quiz.require_email_otp."

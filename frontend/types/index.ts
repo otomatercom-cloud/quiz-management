@@ -42,6 +42,7 @@ export type AttemptPayload =
       quiz: { id: string; title: string; instructions: string; duration_minutes: number };
       started_at: string; deadline_at: string; server_now: string; total_marks: number;
       questions: import("@/lib/quiz-state").Question[];
+      integrity?: { mode: "off" | "warn" | "strict"; max: number; count: number; seb_required: boolean; seb_key: string; calculator: boolean; spreadsheet: boolean };
     };
 
 export type AdminDashboard = {

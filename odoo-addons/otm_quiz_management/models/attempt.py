@@ -46,6 +46,9 @@ class OtmQuizAttempt(models.Model):
         [("pending", "Pending"), ("pass", "Pass"), ("fail", "Fail")], default="pending", index=True, readonly=True)
     time_taken_seconds = fields.Integer(readonly=True)
     answer_ids = fields.One2many("otm.quiz.attempt.answer", "attempt_id")
+    event_ids = fields.One2many("otm.quiz.attempt.event", "attempt_id", string="Integrity Events", readonly=True)
+    violation_count = fields.Integer(readonly=True)
+    terminated_reason = fields.Char(readonly=True)
     # scholarship
     scholarship_status = fields.Selection(
         [("pending", "Pending"), ("not_applicable", "Not applicable"), ("not_eligible", "Not eligible"),
@@ -311,6 +314,44 @@ class OtmQuizAttempt(models.Model):
 
     def action_print_result(self):
         return self.env.ref("otm_quiz_management.action_report_attempt_result").report_action(self)
+
+
+class OtmQuizAttemptEvent(models.Model):
+    """Integrity log: the student's browser reports focus loss, fullscreen exit and similar. Staff review it; strict mode counts it."""
+    _name = "otm.quiz.attempt.event"
+    _description = "Quiz Attempt Integrity Event"
+    _order = "id"
+
+    KINDS = [("blur", "Window lost focus"), ("hidden", "Tab hidden / switched"), ("fullscreen_exit", "Left fullscreen"),
+             ("paste", "Paste attempt"), ("seb_missing", "Safe Exam Browser not detected")]
+    COUNTED = ("blur", "hidden", "fullscreen_exit")
+    DEDUPE_SECONDS = 3  # blur + hidden fire together for one switch: count it once
+
+    attempt_id = fields.Many2one("otm.quiz.attempt", required=True, ondelete="cascade", index=True)
+    kind = fields.Selection(KINDS, required=True)
+    at = fields.Datetime(default=fields.Datetime.now, readonly=True)
+    counted = fields.Boolean(readonly=True)
+
+    @api.model
+    def _record(self, att, kind):
+        """Log one event; returns (violation_count, terminated). Strict mode submits the attempt at the limit."""
+        att = att.sudo()
+        quiz = att.quiz_id
+        if att.state != "in_progress" or quiz.integrity_mode == "off" or kind not in dict(self.KINDS):
+            return att.violation_count, False
+        now = fields.Datetime.now()
+        recent = self.search([("attempt_id", "=", att.id), ("counted", "=", True),
+                              ("at", ">=", now - timedelta(seconds=self.DEDUPE_SECONDS))], limit=1)
+        counted = kind in self.COUNTED and not recent
+        if len(att.event_ids) < 200:  # a hostile client cannot grow the log without bound
+            self.create({"attempt_id": att.id, "kind": kind, "counted": counted})
+        if counted:
+            att.violation_count += 1
+        if quiz.integrity_mode == "strict" and att.violation_count >= quiz.max_violations:
+            att.terminated_reason = "Auto-submitted: %d integrity violations." % att.violation_count
+            att.submit()
+            return att.violation_count, True
+        return att.violation_count, False
 
 
 class OtmQuizAttemptAnswer(models.Model):

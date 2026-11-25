@@ -64,6 +64,16 @@ class OtmQuiz(models.Model):
     randomize_questions = fields.Boolean(default=True)
     randomize_options = fields.Boolean(default=True)
     grace_seconds = fields.Integer(default=30, help="Network grace applied after the server deadline.")
+    # exam integrity (focus watcher, Safe Exam Browser, built-in tools)
+    integrity_mode = fields.Selection(
+        [("off", "Off"), ("warn", "Warn and log only"), ("strict", "Strict: auto-submit after too many violations")],
+        default="off", required=True)
+    max_violations = fields.Integer(default=3, help="Strict mode: the attempt is submitted automatically when this many violations are reached.")
+    require_seb = fields.Boolean(string="Require Safe Exam Browser")
+    seb_config_key = fields.Char(string="SEB Config Key", groups="otm_quiz_management.group_otm_quiz_manager",
+                                 help="Config Key (64 hex characters) shown in the SEB Config Tool for your .seb file.")
+    allow_calculator = fields.Boolean(string="Built-in calculator")
+    allow_spreadsheet = fields.Boolean(string="Built-in spreadsheet")
     show_results_immediately = fields.Boolean(default=True)
     results_published = fields.Boolean(help="Used when results are not shown immediately.")
     show_correct_answers_after_submission = fields.Boolean()
@@ -93,6 +103,24 @@ class OtmQuiz(models.Model):
     allow_guest = fields.Boolean(
         string="Allow Guests", help="Anyone can take this open quiz with just a name and mobile number (no account). "
                                     "Guests earn no scholarship or XP and cannot use the student portal.")
+
+    @api.constrains("require_seb", "seb_config_key", "max_violations")
+    def _check_integrity(self):
+        import re
+        for rec in self:
+            if rec.max_violations < 1 or rec.max_violations > 20:
+                raise ValidationError("Maximum violations must be between 1 and 20.")
+            if rec.require_seb and not re.fullmatch(r"[0-9a-fA-F]{64}", (rec.sudo().seb_config_key or "").strip()):
+                raise ValidationError("Safe Exam Browser needs the 64-character Config Key.")
+
+    @api.constrains("require_seb", "seb_config_key", "max_violations")
+    def _check_integrity(self):
+        import re
+        for rec in self:
+            if rec.max_violations < 1 or rec.max_violations > 20:
+                raise ValidationError("Maximum violations must be between 1 and 20.")
+            if rec.require_seb and not re.fullmatch(r"[0-9a-fA-F]{64}", (rec.sudo().seb_config_key or "").strip()):
+                raise ValidationError("Safe Exam Browser needs the 64-character Config Key.")
 
     @api.constrains("allow_guest", "registration_required", "room_ids")
     def _check_guest_access(self):

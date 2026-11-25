@@ -14,6 +14,7 @@ const ACTIONS: Record<string, { method: string; schema: z.ZodTypeAny; max: numbe
   cancel_registration: { method: "cancel_registration", schema: registrationRef, max: 20, windowMs: 60_000 },
   start_attempt: { method: "start_attempt", schema: quizRef, max: 15, windowMs: 60_000 },
   save_answer: { method: "save_answer", schema: answerSchema, max: 240, windowMs: 60_000 },
+  log_event: { method: "log_event", schema: z.object({ attempt_public_id: z.string().regex(/^[0-9a-f]{16}$/), kind: z.enum(["blur", "hidden", "fullscreen_exit", "paste", "seb_missing"]) }), max: 60, windowMs: 60_000 },
   submit_attempt: { method: "submit_attempt", schema: attemptRef, max: 20, windowMs: 60_000 },
   set_avatar: { method: "student_set_avatar", schema: avatarSchema, max: 10, windowMs: 60_000 },
   join_room: { method: "student_join_room", schema: roomRef, max: 20, windowMs: 60_000 },
@@ -21,7 +22,7 @@ const ACTIONS: Record<string, { method: string; schema: z.ZodTypeAny; max: numbe
   update_profile: { method: "student_update_profile", schema: profileSchema, max: 10, windowMs: 60_000 },
 };
 
-const GUEST_ACTIONS = new Set(["start_attempt", "save_answer", "submit_attempt"]);
+const GUEST_ACTIONS = new Set(["start_attempt", "save_answer", "submit_attempt", "log_event"]);
 
 export async function POST(req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;

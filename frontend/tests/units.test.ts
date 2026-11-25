@@ -158,3 +158,65 @@ describe("public phase 1 schemas", () => {
     expect((await verifySession(tok2, secret) as { guest?: boolean }).guest).toBeUndefined();
   });
 });
+
+import { evaluate, display } from "@/lib/formula";
+import { expectedSebHash, sebAllowed } from "@/lib/seb";
+
+describe("in-exam spreadsheet engine", () => {
+  const val = (sheet: Record<string, string>, ref: string) => display(evaluate(sheet, ref));
+  it("does arithmetic with precedence, unary minus and powers", () => {
+    expect(val({ A1: "=2+3*4" }, "A1")).toBe("14");
+    expect(val({ A1: "=(2+3)*4" }, "A1")).toBe("20");
+    expect(val({ A1: "=-2^2" }, "A1")).toBe("4");
+    expect(val({ A1: "=2^3^2" }, "A1")).toBe("512");
+    expect(val({ A1: "=10/4" }, "A1")).toBe("2.5");
+  });
+  it("reads cells and ranges", () => {
+    const s = { A1: "10", A2: "20", A3: "30", B1: "=SUM(A1:A3)", B2: "=AVERAGE(A1:A3)", B3: "=MAX(A1:A3)-MIN(A1:A3)", B4: "=COUNT(A1:A3)" };
+    expect([val(s, "B1"), val(s, "B2"), val(s, "B3"), val(s, "B4")]).toEqual(["60", "20", "20", "3"]);
+  });
+  it("supports ROUND, IF and comparisons", () => {
+    expect(val({ A1: "=ROUND(3.14159,2)" }, "A1")).toBe("3.14");
+    expect(val({ A1: "5", B1: "=IF(A1>3,100,0)" }, "B1")).toBe("100");
+    expect(val({ A1: "5", B1: "=IF(A1<>5,1,2)" }, "B1")).toBe("2");
+  });
+  it("reports errors instead of throwing", () => {
+    expect(val({ A1: "=1/0" }, "A1")).toBe("#DIV/0!");
+    expect(val({ A1: "=B1", B1: "=A1" }, "A1")).toBe("#CIRC");
+    expect(val({ A1: "=Z99" }, "A1")).toBe("#REF");
+    expect(val({ A1: "=SQRT(-1)" }, "A1")).toBe("#NUM");
+    expect(val({ A1: "=1+" }, "A1")).toBe("#ERR");
+    expect(val({ A1: "=FOO(1)" }, "A1")).toBe("#ERR");
+  });
+  it("never executes code: odd input is just an error", () => {
+    for (const bad of ["=alert(1)", "=constructor", "=process.exit()", "=1;2", "=`x`", "=A1:A2", "=__proto__"])
+      expect(String(evaluate({ A1: bad }, "A1"))).toMatch(/^#/);
+  });
+  it("plain text and numbers with commas stay as typed", () => {
+    expect(val({ A1: "hello" }, "A1")).toBe("hello");
+    expect(val({ A1: "1,250" }, "A1")).toBe("1250");
+  });
+});
+
+describe("Safe Exam Browser hash", () => {
+  const key = "ab".repeat(32);
+  const url = "https://quiz.example.org/student/quiz/0123456789abcdef";
+  it("accepts the exact URL+key hash only", () => {
+    const h = expectedSebHash(url, key);
+    expect(sebAllowed(url, key, h)).toBe(true);
+    expect(sebAllowed(url + "x", key, h)).toBe(false);
+    expect(sebAllowed(url, "cd".repeat(32), h)).toBe(false);
+    expect(sebAllowed(url, key, null)).toBe(false);
+    expect(sebAllowed(url, "short", h)).toBe(false);
+  });
+});
+
+describe("integrity fields in the quiz payload", () => {
+  it("wizard maps integrity settings and drops the SEB key when SEB is off", () => {
+    const base = { name: "Q", quiz_start: "2026-12-01T10:00", quiz_end: "2026-12-02T10:00", duration_minutes: 30, passing_percentage: 40, maximum_attempts: 1, access: "open" } as never;
+    const off = buildQuizVals({ ...(base as object), integrity_mode: "strict", max_violations: "3", seb_config_key: "x".repeat(64) } as never);
+    expect(off).toMatchObject({ integrity_mode: "strict", max_violations: 3, require_seb: false, seb_config_key: false });
+    const on = buildQuizVals({ ...(base as object), require_seb: true, seb_config_key: " " + "a".repeat(64) + " ", allow_calculator: true } as never);
+    expect(on).toMatchObject({ require_seb: true, seb_config_key: "a".repeat(64), allow_calculator: true, allow_spreadsheet: false, integrity_mode: "off" });
+  });
+});

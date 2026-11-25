@@ -20,7 +20,7 @@ export default async function EditQuiz({ params }: { params: Promise<{ id: strin
       domain: [["public_id", "=", id]], limit: 1,
       fields: ["public_id", "name", "state", "subject", "description", "instructions", "quiz_start", "quiz_end", "duration_minutes", "passing_percentage", "maximum_attempts",
         "negative_marking_enabled", "default_negative_marks", "randomize_questions", "randomize_options", "show_results_immediately", "show_correct_answers_after_submission",
-        "registration_required", "allow_guest", "approval_required", "registration_start", "registration_end", "registration_limit", "scholarship_enabled", "course_fee",
+        "registration_required", "allow_guest", "integrity_mode", "max_violations", "require_seb", "seb_config_key", "allow_calculator", "allow_spreadsheet", "approval_required", "registration_start", "registration_end", "registration_limit", "scholarship_enabled", "course_fee",
         "fixed_question_ids", "question_pool_ids", "scholarship_rule_ids"],
     })).records[0];
     if (!q) notFound();
@@ -38,6 +38,8 @@ export default async function EditQuiz({ params }: { params: Promise<{ id: strin
         randomize_questions: q.randomize_questions, randomize_options: q.randomize_options,
         show_results_immediately: q.show_results_immediately, show_correct_answers_after_submission: q.show_correct_answers_after_submission,
         access: !q.registration_required ? "open" : q.approval_required ? "approval" : "auto", registration_required: q.registration_required, allow_guest: q.allow_guest,
+        integrity_mode: q.integrity_mode, max_violations: q.max_violations, require_seb: q.require_seb,
+        seb_config_key: q.seb_config_key || "", allow_calculator: q.allow_calculator, allow_spreadsheet: q.allow_spreadsheet,
         registration_start: odooToLocalInput(q.registration_start), registration_end: odooToLocalInput(q.registration_end), registration_limit: q.registration_limit,
         scholarship_enabled: q.scholarship_enabled, course_fee: q.course_fee,
       },

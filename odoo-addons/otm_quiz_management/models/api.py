@@ -26,7 +26,7 @@ G_QBANK = (G_MANAGER, G_TEACHER)  # question bank: managers and teachers (teache
 ADMIN_MODELS = {
     "otm.quiz": G_MANAGER, "otm.quiz.question": G_QBANK, "otm.quiz.question.option": G_QBANK, "otm.quiz.question.pool": G_MANAGER,
     "otm.quiz.scholarship.rule": G_MANAGER, "otm.quiz.registration": G_MANAGER, "otm.quiz.tag": G_QBANK,
-    "otm.quiz.attempt": G_EVAL, "otm.quiz.attempt.answer": G_EVAL, "otm.quiz.audit.log": G_ADMIN,
+    "otm.quiz.attempt": G_EVAL, "otm.quiz.attempt.answer": G_EVAL, "otm.quiz.attempt.event": G_EVAL, "otm.quiz.audit.log": G_ADMIN,
     "otm.quiz.room": G_QBANK, "otm.quiz.room.member": G_QBANK, "otm.quiz.room.post": G_QBANK,  # teachers: read-only except own announcements (ACL)
 }
 ADMIN_WRITABLE = {"otm.quiz", "otm.quiz.question", "otm.quiz.question.pool", "otm.quiz.scholarship.rule",
@@ -264,9 +264,19 @@ class OtmQuizApi(models.AbstractModel):
         att = self.env["otm.quiz.attempt"].start_for(self._quiz_by_public(quiz_public_id), p)
         return {"attempt_id": att.public_id}
 
+    @api.model
+    def log_event(self, partner_id, attempt_public_id, kind):
+        p = self._partner(partner_id, guest_ok=True)
+        att = self._attempt_for(p, attempt_public_id)
+        count, terminated = self.env["otm.quiz.attempt.event"]._record(att, kind)
+        return {"count": count, "max": att.quiz_id.max_violations, "terminated": terminated}
+
     def _attempt_payload(self, att):
         quiz = att.quiz_id
         return {
+            "integrity": {"mode": quiz.integrity_mode, "max": quiz.max_violations, "count": att.violation_count,
+                          "seb_required": quiz.require_seb, "seb_key": quiz.sudo().seb_config_key or "" if quiz.require_seb else "",
+                          "calculator": quiz.allow_calculator, "spreadsheet": quiz.allow_spreadsheet},
             "id": att.public_id, "state": att.state, "attempt_number": att.attempt_number,
             "quiz": {"id": quiz.public_id, "title": quiz.name, "instructions": quiz.instructions or "",
                      "duration_minutes": quiz.duration_minutes},
