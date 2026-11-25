@@ -70,7 +70,7 @@ See `deploy/deploy_rooms.sh`. The `elysians` service is stopped before the modul
 - **Email OTP** (registration and guests): Settings > Technical > System Parameters, `otm_quiz.require_email_otp` = `1`. Needs a working outgoing mail server. Codes: 6 digits, 10 min, 60 s resend wait, 5 codes/hour/email, locked after 5 wrong guesses; only a hash is stored.
 - **Turnstile**: set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in `frontend/.env`, then rebuild (the site key is baked at build). Applies to register, OTP, guest start and forgot-password. Unset = off.
 - **Rate limits**: BFF per IP, per email (OTP) and per phone (guest); add `deploy/nginx_ratelimit.conf` at nginx too. The in-app limiter is per process; nginx covers restarts and multiple instances.
-- **Deploy**: `deploy/deploy_public.sh` (stops `elysians`, `-u otm_quiz_management`, starts `elysians`, rebuilds, pm2 restart).
+- **Deploy**: `deploy/deploy_public.sh` (stops the lg19 Odoo service (`SERVICE` variable), `-u otm_quiz_management`, starts it again, rebuilds, pm2 restart).
 - Not covered by tests: real Cloudflare calls, real mail delivery, and the production separate-cursor path.
 
 ## Exam integrity: monitoring, built-in tools, Safe Exam Browser
@@ -81,5 +81,5 @@ Set per quiz in the wizard (Settings step, "Exam integrity") or in Odoo (Quiz > 
 - **Built-in calculator and spreadsheet**: tick them so students never leave the exam window. The sheet (A-J, 20 rows) supports `+ - * / ^`, comparisons and `SUM AVERAGE MIN MAX COUNT ROUND ABS SQRT POWER IF`. It uses its own parser, no `eval`, and is kept on the student's device only.
 - **Safe Exam Browser (SEB)**: install SEB on the exam computers, create a config in the SEB Config Tool (start URL = your quiz site, allowed apps e.g. calculator), copy its **Config Key** (64 hex characters) into the quiz. The Next.js server checks the `X-SafeExamBrowser-ConfigKeyHash` header (SHA-256 of the exact page URL + key) when the exam page loads; anything else sees "Open this quiz in Safe Exam Browser" and the miss is logged. `NEXT_PUBLIC_APP_URL` must equal the exact public URL (scheme and host) SEB opens. If you export the config again, the key changes: update the quiz.
 - **Limits, honestly**: a web page cannot see or start other desktop apps, so tab/focus monitoring can be bypassed by a determined student, and a phone beside the keyboard is invisible. SEB is the strong control. The SEB header check is verified by unit test against the documented hash scheme, but was not run against a real SEB install; test it once with your config before a real exam. The attempt clock starts when the student clicks Start on the quiz page, before SEB is checked.
-- **Deploy**: `deploy/deploy_integrity.sh` (stops `elysians`, `-u otm_quiz_management`, starts `elysians`, rebuild, pm2 restart `otm-quiz-frontend`).
+- **Deploy**: `deploy/deploy_integrity.sh` (stops the lg19 Odoo service (`SERVICE` variable), `-u otm_quiz_management`, starts it again, rebuild, pm2 restart `otm-quiz-frontend`).
 - Tests: 61 Odoo tests and 32 frontend unit tests pass locally.
