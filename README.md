@@ -62,7 +62,7 @@ Quizzes: create wizard, edit, publish/close/cancel/archive/reset/publish results
 * Not included yet: comments/chat, live challenge mode, auto-add of a student batch to a room (bridge module), staff view of student photos in the frontend.
 
 ### Deploy script (Odoo module update, then frontend)
-See `deploy/deploy_rooms.sh`. The `elysians` service is stopped before the module update and started after it.
+See `deploy/deploy_rooms.sh`. The lg19 Odoo service (`SERVICE` variable) is stopped before the module update and started after it.
 
 ## Public Phase 1: guest quizzes, email OTP, CAPTCHA, rate limits
 

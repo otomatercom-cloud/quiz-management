@@ -35,4 +35,4 @@ npm ci --no-audit --no-fund
 npm run build
 pm2 restart quiz-frontend --update-env
 pm2 logs quiz-frontend --err --lines 5 --nostream
-echo "Done. Test: edit a quiz > Settings > Exam integrity, start it, switch tabs.
+echo "Done. Test: edit a quiz, Settings step, Exam integrity, start it and switch tabs."
