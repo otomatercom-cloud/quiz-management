@@ -38,9 +38,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
     switch (action) {
       case "search": data = await odooCall("admin_search_read", { acting_user_id, ...adminSearchSchema.parse(body) }); break;
       case "create": data = await odooCall("admin_create", { acting_user_id, ...adminCreateSchema.parse(body) }); break;
-      case "write": data = await odooCall("admin_write", { acting_user_id, ...adminWriteSchema.parse(body) }); break;
-      case "delete": data = await odooCall("admin_delete", { acting_user_id, ...deleteSchema.parse(body) }); break;
-      case "call": data = await odooCall("admin_call", { acting_user_id, ...adminCallSchema.parse(body) }); break;
+      // Odoo JSON-2 reserves the parameter name "ids", so it is sent to Odoo as "record_ids"
+      case "write": { const { ids, ...rest } = adminWriteSchema.parse(body); data = await odooCall("admin_write", { acting_user_id, ...rest, record_ids: ids }); break; }
+      case "delete": { const { ids, ...rest } = deleteSchema.parse(body); data = await odooCall("admin_delete", { acting_user_id, ...rest, record_ids: ids }); break; }
+      case "call": { const { ids, ...rest } = adminCallSchema.parse(body); data = await odooCall("admin_call", { acting_user_id, ...rest, record_ids: ids }); break; }
       case "teachers": data = await odooCall("admin_teachers", { acting_user_id }); break;
       case "teacher-create": data = await odooCall("admin_create_teacher", { acting_user_id, ...teacherCreateSchema.parse(body) }); break;
       case "teacher-active": data = await odooCall("admin_set_teacher_active", { acting_user_id, ...teacherActiveSchema.parse(body) }); break;

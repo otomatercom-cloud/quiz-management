@@ -109,3 +109,26 @@ class TestIntegrity(TransactionCase):
         with self.assertRaises(ValidationError):
             self.quiz(max_violations=0)
         self.assertTrue(self.quiz(require_seb=True, seb_config_key=KEY).require_seb)
+
+    def test_api_has_no_json2_reserved_parameter_names(self):
+        """Odoo 19 JSON-2 reserves `ids` and `context`: an @api.model method with such an argument answers HTTP 422 in production
+        although a direct Python call works, which is why unit tests never caught it."""
+        import inspect
+        bad = []
+        for name in dir(type(self.api)):
+            if name.startswith("_") or not callable(getattr(type(self.api), name, None)):
+                continue
+            fn = getattr(type(self.api), name)
+            if not getattr(fn, "__module__", "").startswith("odoo.addons.otm_quiz_management"):
+                continue  # ORM methods such as browse(ids) are not our API
+            params = inspect.signature(fn).parameters
+            bad += ["%s(%s)" % (name, p) for p in params if p in ("ids", "context")]
+        self.assertEqual(bad, [])
+
+    def test_admin_call_publishes_with_record_ids(self):
+        quiz = self.quiz()
+        quiz.action_reset_draft()
+        user = self.env.ref("base.user_admin")
+        user.group_ids = [(4, self.env.ref("otm_quiz_management.group_otm_quiz_admin").id)]
+        self.api.admin_call(user.id, "otm.quiz", quiz.ids, "action_publish")
+        self.assertEqual(quiz.state, "published")

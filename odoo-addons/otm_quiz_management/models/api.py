@@ -498,25 +498,25 @@ class OtmQuizApi(models.AbstractModel):
         return self._admin_check(acting_user_id, model)[model].create(vals).id
 
     @api.model
-    def admin_write(self, acting_user_id, model, ids, vals):
+    def admin_write(self, acting_user_id, model, record_ids, vals):  # NOT "ids": JSON-2 reserves that name
         if model not in ADMIN_WRITABLE:
             raise AccessError("Model is read-only.")
-        self._admin_check(acting_user_id, model)[model].browse(ids).write(vals)
+        self._admin_check(acting_user_id, model)[model].browse(record_ids).write(vals)
         return True
 
     @api.model
-    def admin_delete(self, acting_user_id, model, ids):
+    def admin_delete(self, acting_user_id, model, record_ids):
         if model not in ADMIN_WRITABLE:
             raise AccessError("Model is read-only.")
-        self._admin_check(acting_user_id, model)[model].browse(ids).unlink()
+        self._admin_check(acting_user_id, model)[model].browse(record_ids).unlink()
         return True
 
     @api.model
-    def admin_call(self, acting_user_id, model, ids, method, args=None, kwargs=None):
+    def admin_call(self, acting_user_id, model, record_ids, method, args=None, kwargs=None):
         if method not in ADMIN_METHODS.get(model, ()):
             raise AccessError("Action not allowed.")
         env = self._admin_check(acting_user_id, model)
-        getattr(env[model].browse(ids), method)(*(args or []), **(kwargs or {}))
+        getattr(env[model].browse(record_ids), method)(*(args or []), **(kwargs or {}))
         return True
 
     @api.model
