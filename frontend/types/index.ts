@@ -6,7 +6,7 @@ export type QuizCard = {
   maximum_attempts: number; registration_required: boolean; approval_required: boolean; registration_start: string | null;
   registration_end: string | null; quiz_start: string | null; quiz_end: string | null; registration_open: boolean;
   window_open: boolean; scholarship_enabled: boolean; eligibility_notes: string; negative_marking: boolean;
-  has_thumbnail: boolean;
+  has_thumbnail: boolean; allow_guest?: boolean;
   registration_status?: string | null; registration_id?: string | null; attempts_used?: number;
   active_attempt?: string | null; can_start?: boolean;
   instructions?: string;
@@ -28,7 +28,8 @@ export type ResultRow = {
 };
 
 export type StudentDashboard = {
-  student: { partner_id: number; name: string; email: string; phone: string; student_code: string; education: string };
+  student: { partner_id: number; name: string; email: string; phone: string; student_code: string; education: string;
+    nickname: string; avatar: string; has_photo: boolean; photo_consent: boolean };
   available: QuizCard[]; registered: Registration[]; deadlines: { quiz: string; registration_end: string | null }[];
   active_attempt: { id: string; quiz_title: string; deadline_at: string } | null;
   recent_results: ResultRow[]; scholarships: ResultRow[];
@@ -64,3 +65,24 @@ export type QuizReport = {
 };
 
 export type SearchResult<T = Record<string, unknown>> = { total: number; records: T[] };
+
+export type Avatar = "fox" | "owl" | "robot" | "cat" | "bear" | "photo";
+export type RoomCard = {
+  id: string; name: string; description: string; color: string; access_mode: "open" | "approval" | "invite";
+  members: number; membership: "approved" | "pending" | "rejected" | null; parent_id: string | null;
+  subjects: { id: string; name: string; color: string }[];
+};
+export type RoomsList = { mine: RoomCard[]; explore: RoomCard[] };
+export type BoardRow = { nickname: string; avatar: string; rank: number; xp: number; me: boolean };
+export type RoomDetail = RoomCard & {
+  locked: boolean; parent: { id: string; name: string; color: string } | null; teachers: string[];
+  quizzes?: QuizCard[];
+  posts?: { id: number; author: string; body: string; pinned: boolean; created: string | null }[];
+  leaderboard?: { top: BoardRow[]; me: BoardRow | null; days: number };
+};
+export type StudentStats = {
+  xp: number; level: number; xp_per_level: number; xp_in_level: number; weekly_xp: number; streak: number;
+  quizzes_done: number; badges: { key: string; label: string; earned: boolean }[];
+  subjects: { subject: string; average: number; attempts: number; minutes: number }[];
+  identity: { nickname: string; avatar: string };
+};

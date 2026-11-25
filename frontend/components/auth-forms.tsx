@@ -7,21 +7,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Alert } from "@/components/ui";
 import { Field, postJson } from "@/components/forms";
+import { OtpBox } from "@/components/otp-box";
+import { Turnstile } from "@/components/turnstile";
+import { usePublicConfig } from "@/components/use-public-config";
 import { loginSchema, registerSchema, type RegisterInput } from "@/lib/validation/schemas";
 
 export function RegisterForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+  const cfg = usePublicConfig();
+  const [captcha, setCaptcha] = useState("");
+  const [reset, setReset] = useState(0);
+  const [otp, setOtp] = useState("");
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
 
   return (
     <form className="space-y-4" noValidate onSubmit={handleSubmit(async (v) => {
       setError(null);
       try {
-        await postJson("/api/auth/register", v);
+        await postJson("/api/auth/register", { ...v, otp, turnstile: captcha });
         router.push("/student/dashboard");
         router.refresh();
-      } catch (e) { setError((e as Error).message); }
+      } catch (e) { setError((e as Error).message); setReset((n) => n + 1); }
     })}>
       {error && <Alert>{error}</Alert>}
       <Field label="Full name" error={errors.name?.message}><input className="input" autoComplete="name" {...register("name")} /></Field>
@@ -36,7 +43,9 @@ export function RegisterForm() {
       <Field label="Password" error={errors.password?.message} hint="At least 8 characters">
         <input className="input" type="password" autoComplete="new-password" {...register("password")} />
       </Field>
-      <button className="btn-primary w-full" disabled={isSubmitting}>{isSubmitting ? "Creating account…" : "Create account"}</button>
+      {cfg?.require_email_otp && <OtpBox email={watch("email") ?? ""} purpose="register" turnstile={captcha} onResetCaptcha={() => setReset((n) => n + 1)} value={otp} onChange={setOtp} />}
+      {cfg && <Turnstile siteKey={cfg.turnstile_site_key} onToken={setCaptcha} resetKey={reset} />}
+      <button className="btn-primary w-full" disabled={isSubmitting || !cfg || (!!cfg.turnstile_site_key && !captcha)}>{isSubmitting ? "Creating account…" : "Create account"}</button>
       <p className="text-center text-sm text-muted">Already registered? <Link className="font-semibold text-primary" href="/login">Sign in</Link></p>
     </form>
   );
@@ -84,15 +93,19 @@ export function ForgotForm() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<{ email: string }>({
     resolver: zodResolver(z.object({ email: z.string().trim().email("Enter a valid email address") })),
   });
+  const cfg = usePublicConfig();
+  const [captcha, setCaptcha] = useState("");
+  const [reset, setReset] = useState(0);
   if (done) return <Alert tone="success">If an account exists for that email, a reset link has been sent.</Alert>;
   return (
     <form className="space-y-4" noValidate onSubmit={handleSubmit(async (v) => {
       setError(null);
-      try { await postJson("/api/auth/forgot", v); setDone(true); } catch (e) { setError((e as Error).message); }
+      try { await postJson("/api/auth/forgot", { ...v, turnstile: captcha }); setDone(true); } catch (e) { setError((e as Error).message); setReset((n) => n + 1); }
     })}>
       {error && <Alert>{error}</Alert>}
       <Field label="Email" error={errors.email?.message}><input className="input" type="email" {...register("email")} /></Field>
-      <button className="btn-primary w-full" disabled={isSubmitting}>Send reset link</button>
+      {cfg && <Turnstile siteKey={cfg.turnstile_site_key} onToken={setCaptcha} resetKey={reset} />}
+      <button className="btn-primary w-full" disabled={isSubmitting || !cfg || (!!cfg.turnstile_site_key && !captcha)}>Send reset link</button>
     </form>
   );
 }

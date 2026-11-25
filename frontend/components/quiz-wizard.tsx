@@ -27,6 +27,7 @@ export function buildQuizVals(v: Values) {
     registration_required: v.access !== "open", approval_required: v.access === "approval", registration_limit: Number(v.registration_limit || 0),
     registration_start: v.access !== "open" && v.registration_start ? toOdooDatetime(v.registration_start) : false,
     registration_end: v.access !== "open" && v.registration_end ? toOdooDatetime(v.registration_end) : false,
+    allow_guest: v.access === "open" && !!v.allow_guest,
     scholarship_enabled: !!v.scholarship_enabled, course_fee: Number(v.course_fee || 0),
   };
   return vals;
@@ -139,6 +140,9 @@ export function QuizWizard({ initial }: { initial?: WizardInitial }) {
             <label className="flex items-start gap-2"><input type="radio" value="approval" className="mt-1" {...register("access")} /><span><strong>Registration with approval</strong><br /><span className="text-muted">Students register; they can start only after you approve their registration.</span></span></label>
             <label className="flex items-start gap-2"><input type="radio" value="auto" className="mt-1" {...register("access")} /><span><strong>Registration, approved automatically</strong><br /><span className="text-muted">Students register and can start immediately when the quiz opens.</span></span></label>
             <label className="flex items-start gap-2"><input type="radio" value="open" className="mt-1" {...register("access")} /><span><strong>Open quiz</strong><br /><span className="text-muted">No registration. Any signed-in student can start while the quiz is open.</span></span></label>
+            {!regReq && (
+              <label className="ml-6 flex items-start gap-2 rounded-lg bg-blue-50 p-3"><input type="checkbox" className="mt-1" {...register("allow_guest")} /><span><strong>Also allow guests</strong><br /><span className="text-muted">Anyone can take it with just a name and phone number, no account. Guests earn no XP or scholarship and cannot join rooms. Not available for room quizzes.</span></span></label>
+            )}
           </fieldset>
           {regReq && (
             <div className="grid gap-4 sm:grid-cols-3">

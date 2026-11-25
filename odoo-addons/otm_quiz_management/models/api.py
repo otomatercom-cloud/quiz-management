@@ -27,14 +27,16 @@ ADMIN_MODELS = {
     "otm.quiz": G_MANAGER, "otm.quiz.question": G_QBANK, "otm.quiz.question.option": G_QBANK, "otm.quiz.question.pool": G_MANAGER,
     "otm.quiz.scholarship.rule": G_MANAGER, "otm.quiz.registration": G_MANAGER, "otm.quiz.tag": G_QBANK,
     "otm.quiz.attempt": G_EVAL, "otm.quiz.attempt.answer": G_EVAL, "otm.quiz.audit.log": G_ADMIN,
+    "otm.quiz.room": G_QBANK, "otm.quiz.room.member": G_QBANK, "otm.quiz.room.post": G_QBANK,  # teachers: read-only except own announcements (ACL)
 }
 ADMIN_WRITABLE = {"otm.quiz", "otm.quiz.question", "otm.quiz.question.pool", "otm.quiz.scholarship.rule",
-                  "otm.quiz.tag"}
+                  "otm.quiz.tag", "otm.quiz.room", "otm.quiz.room.member", "otm.quiz.room.post"}
 ADMIN_METHODS = {
     "otm.quiz": {"action_publish", "action_close", "action_cancel", "action_archive_quiz", "action_reset_draft",
                  "action_publish_results", "action_recalculate_scholarships"},
     "otm.quiz.question": {"action_archive_selected", "action_activate_selected"},
     "otm.quiz.registration": {"action_confirm", "action_cancel", "action_disqualify"},
+    "otm.quiz.room.member": {"action_approve", "action_reject"},
     "otm.quiz.attempt": {"decide_scholarship", "override_scholarship"},
     "otm.quiz.attempt.answer": {"grade_descriptive"},
 }
@@ -55,10 +57,12 @@ class OtmQuizApi(models.AbstractModel):
     _description = "Quiz API (called by the Next.js server)"
 
     # ================================================================== helpers
-    def _partner(self, partner_id):
+    def _partner(self, partner_id, guest_ok=False):
         p = self.env["res.partner"].sudo().browse(int(partner_id or 0)).exists()
         if not p or not p.otm_is_quiz_student:
             raise AccessError("Unknown student.")
+        if p.otm_is_guest and not guest_ok:
+            raise AccessError("Please create a free account to use this feature.")
         return p
 
     def _quiz_by_public(self, public_id):
@@ -80,6 +84,11 @@ class OtmQuizApi(models.AbstractModel):
             raise AccessError("Not allowed.")
         return self.env(user=user.id)
 
+    def _room_domain(self, partner):
+        """Quizzes with no room are open to every student; room quizzes only to members of one of their rooms."""
+        allowed = self.env["otm.quiz.room"]._accessible_for(partner).ids
+        return ["|", ("room_ids", "=", False), ("room_ids", "in", allowed)]
+
     def _quiz_card(self, q, partner=None):
         now = fields.Datetime.now()
         data = {
@@ -93,6 +102,7 @@ class OtmQuizApi(models.AbstractModel):
             "registration_open": q._registration_open(now), "window_open": q._window_open(now),
             "scholarship_enabled": q.scholarship_enabled, "eligibility_notes": q.eligibility_notes or "",
             "negative_marking": q.negative_marking_enabled, "has_thumbnail": bool(q.thumbnail),
+            "allow_guest": bool(q.allow_guest and not q.registration_required),
         }
         if partner:
             reg = self.env["otm.quiz.registration"].sudo().search(
@@ -115,7 +125,7 @@ class OtmQuizApi(models.AbstractModel):
     def public_quizzes(self, search="", page=1, limit=12):
         offset, limit = _page(page, limit, 50)
         now = fields.Datetime.now()
-        domain = [("state", "=", "published"), ("quiz_end", ">", now)]
+        domain = [("state", "=", "published"), ("quiz_end", ">", now), ("room_ids", "=", False)]
         if search:
             domain.append(("name", "ilike", search))
         Quiz = self.env["otm.quiz"].sudo()
@@ -125,7 +135,7 @@ class OtmQuizApi(models.AbstractModel):
     @api.model
     def public_quiz(self, public_id):
         q = self._quiz_by_public(public_id)
-        if q.state not in ("published", "closed"):
+        if q.state not in ("published", "closed") or q.with_context(active_test=False).room_ids:
             raise UserError("Quiz not found.")
         card = self._quiz_card(q)
         card["instructions"] = q.instructions or ""
@@ -212,7 +222,7 @@ class OtmQuizApi(models.AbstractModel):
     def student_quizzes(self, partner_id, search="", page=1, limit=12):
         p = self._partner(partner_id)
         offset, limit = _page(page, limit, 50)
-        domain = [("state", "=", "published"), ("quiz_end", ">", fields.Datetime.now())]
+        domain = [("state", "=", "published"), ("quiz_end", ">", fields.Datetime.now())] + self._room_domain(p)
         if search:
             domain.append(("name", "ilike", search))
         Quiz = self.env["otm.quiz"].sudo()
@@ -250,7 +260,7 @@ class OtmQuizApi(models.AbstractModel):
     # ================================================================== attempts
     @api.model
     def start_attempt(self, partner_id, quiz_public_id):
-        p = self._partner(partner_id)
+        p = self._partner(partner_id, guest_ok=True)
         att = self.env["otm.quiz.attempt"].start_for(self._quiz_by_public(quiz_public_id), p)
         return {"attempt_id": att.public_id}
 
@@ -272,7 +282,7 @@ class OtmQuizApi(models.AbstractModel):
 
     @api.model
     def get_attempt(self, partner_id, attempt_public_id):
-        p = self._partner(partner_id)
+        p = self._partner(partner_id, guest_ok=True)
         att = self._attempt_for(p, attempt_public_id)
         if att.state == "in_progress" and fields.Datetime.now() > att.deadline_at + timedelta(seconds=att.quiz_id.grace_seconds):
             att.submit()  # time is over: finalise server-side
@@ -282,14 +292,14 @@ class OtmQuizApi(models.AbstractModel):
 
     @api.model
     def save_answer(self, partner_id, attempt_public_id, seq, option_ids=None, text=None, marked=None):
-        p = self._partner(partner_id)
+        p = self._partner(partner_id, guest_ok=True)
         att = self._attempt_for(p, attempt_public_id)
         att.save_answer(p, int(seq), option_ids, text, marked)
         return {"saved": True, "server_now": _iso(fields.Datetime.now())}
 
     @api.model
     def submit_attempt(self, partner_id, attempt_public_id):
-        p = self._partner(partner_id)
+        p = self._partner(partner_id, guest_ok=True)
         att = self._attempt_for(p, attempt_public_id)
         att.submit_by_student(p)
         return self._receipt(att)
@@ -327,7 +337,7 @@ class OtmQuizApi(models.AbstractModel):
 
     @api.model
     def result_detail(self, partner_id, attempt_public_id):
-        p = self._partner(partner_id)
+        p = self._partner(partner_id, guest_ok=True)
         att = self._attempt_for(p, attempt_public_id)
         row = self._result_row(att)
         if not row["visible"]:
@@ -356,7 +366,8 @@ class OtmQuizApi(models.AbstractModel):
         p = self._partner(partner_id)
         now = fields.Datetime.now()
         Quiz = self.env["otm.quiz"].sudo()
-        available = Quiz.search([("state", "=", "published"), ("quiz_end", ">", now)], order="quiz_start asc", limit=6)
+        available = Quiz.search([("state", "=", "published"), ("quiz_end", ">", now)] + self._room_domain(p),
+                                order="quiz_start asc", limit=6)
         regs = self.env["otm.quiz.registration"].sudo().search(
             [("student_id", "=", p.id), ("state", "in", ("registered", "confirmed")), ("quiz_id.quiz_end", ">", now)],
             limit=10)

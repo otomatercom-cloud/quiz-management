@@ -9,7 +9,7 @@ import { resultDetail } from "@/lib/services/student";
 export const dynamic = "force-dynamic";
 
 export default async function ResultPage({ params }: { params: Promise<{ attemptId: string }> }) {
-  const s = await requireStudent();
+  const s = await requireStudent({ guestOk: true });
   const { attemptId } = await params;
   if (!/^[0-9a-f]{16}$/.test(attemptId)) notFound();
   let r;

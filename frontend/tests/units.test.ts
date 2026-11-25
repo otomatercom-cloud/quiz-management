@@ -3,7 +3,7 @@ import { clockOffsetMs, formatClock, remainingMs } from "@/lib/timer";
 import { enqueue, selectOption, statusOf, summarize, type Question } from "@/lib/quiz-state";
 import { rateLimit, resetRateLimits } from "@/lib/rate-limit";
 import { hasRole, signSession, verifySession } from "@/lib/auth/session-core";
-import { adminCallSchema, adminSearchSchema, quizSettingsSchema, scholarshipRuleSchema } from "@/lib/validation/schemas";
+import { adminCallSchema, adminSearchSchema, avatarSchema, quizSettingsSchema, scholarshipRuleSchema } from "@/lib/validation/schemas";
 import { x2many, buildQuizVals } from "@/components/quiz-wizard";
 import { odooToLocalInput, toOdooDatetime } from "@/lib/format";
 
@@ -114,5 +114,47 @@ describe("quiz edit helpers", () => {
     expect(JSON.stringify(buildQuizVals(v))).toBe(JSON.stringify(buildQuizVals({ ...v })));
     expect(buildQuizVals(v).registration_required).toBe(false);
     expect(buildQuizVals({ ...v, access: "approval" }).approval_required).toBe(true);
+  });
+});
+
+describe("avatar and room validation", () => {
+  it("accepts a character and nickname, rejects unknown characters and odd nicknames", () => {
+    expect(avatarSchema.safeParse({ avatar: "fox", nickname: "Blue Fox_1" }).success).toBe(true);
+    expect(avatarSchema.safeParse({ avatar: "dragon", nickname: "Blue Fox" }).success).toBe(false);
+    expect(avatarSchema.safeParse({ avatar: "fox", nickname: "<b>x</b>" }).success).toBe(false);
+    expect(avatarSchema.safeParse({ avatar: "fox", nickname: "ab" }).success).toBe(false);
+  });
+  it("rejects non-base64 photo payloads and unknown room models", () => {
+    expect(avatarSchema.safeParse({ avatar: "photo", nickname: "Blue Fox", photo_consent: true, photo_b64: "<svg onload=x>" }).success).toBe(false);
+    expect(adminSearchSchema.safeParse({ model: "otm.quiz.room", fields: ["name"] }).success).toBe(true);
+    expect(adminSearchSchema.safeParse({ model: "res.users", fields: ["login"] }).success).toBe(false);
+  });
+});
+
+import { guestSchema, otpRequestSchema, registerSchema } from "@/lib/validation/schemas";
+
+describe("public phase 1 schemas", () => {
+  const base = { name: "Asha K", email: "A@B.com", phone: "9876543210", password: "password123" };
+  it("register accepts an empty or 6-digit otp only", () => {
+    expect(registerSchema.parse(base).otp).toBe("");
+    expect(registerSchema.parse({ ...base, otp: "123456" }).email).toBe("a@b.com");
+    expect(() => registerSchema.parse({ ...base, otp: "12ab56" })).toThrow();
+  });
+  it("otp request needs a purpose", () => {
+    expect(otpRequestSchema.parse({ email: "x@y.com", purpose: "guest" }).purpose).toBe("guest");
+    expect(() => otpRequestSchema.parse({ email: "x@y.com", purpose: "admin" })).toThrow();
+  });
+  it("guest needs name, phone and a 16-hex quiz id; email optional", () => {
+    const ok = { quiz_public_id: "0123456789abcdef", name: "Guest One", phone: "98765 43210" };
+    expect(guestSchema.parse(ok).email).toBe("");
+    expect(() => guestSchema.parse({ ...ok, quiz_public_id: "nope" })).toThrow();
+    expect(() => guestSchema.parse({ ...ok, phone: "12" })).toThrow();
+  });
+  it("guest claim survives a signed session round trip", async () => {
+    const secret = "x".repeat(40);
+    const tok = await signSession({ kind: "student", partnerId: 7, name: "G", guest: true }, secret);
+    expect(await verifySession(tok, secret)).toMatchObject({ kind: "student", guest: true });
+    const tok2 = await signSession({ kind: "student", partnerId: 8, name: "S" }, secret);
+    expect((await verifySession(tok2, secret) as { guest?: boolean }).guest).toBeUndefined();
   });
 });

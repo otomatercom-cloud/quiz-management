@@ -1,6 +1,6 @@
 import "server-only";
 import { odooCall } from "@/lib/odoo/client";
-import type { AttemptPayload, Paged, QuizCard, Registration, ResultRow, StudentDashboard } from "@/types";
+import type { AttemptPayload, Paged, QuizCard, Registration, ResultRow, RoomDetail, RoomsList, StudentDashboard, StudentStats } from "@/types";
 
 export const publicQuizzes = (search = "", page = 1, limit = 12) =>
   odooCall<Paged<QuizCard>>("public_quizzes", { search, page, limit });
@@ -19,3 +19,7 @@ export const resultDetail = (partnerId: number, id: string) =>
 export const myScholarships = (partnerId: number) => odooCall<ResultRow[]>("my_scholarships", { partner_id: partnerId });
 export const studentProfile = (partnerId: number) =>
   odooCall<StudentDashboard["student"]>("student_profile", { partner_id: partnerId });
+
+export const studentRooms = (partnerId: number) => odooCall<RoomsList>("student_rooms", { partner_id: partnerId });
+export const studentRoom = (partnerId: number, id: string) => odooCall<RoomDetail>("student_room", { partner_id: partnerId, room_public_id: id });
+export const studentStats = (partnerId: number) => odooCall<StudentStats>("student_stats", { partner_id: partnerId });

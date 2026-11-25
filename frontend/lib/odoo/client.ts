@@ -21,7 +21,7 @@ export class OdooError extends Error {
 const RETRYABLE = new Set([
   "public_quizzes", "public_quiz", "quiz_thumbnail", "student_profile", "student_quizzes", "my_registrations",
   "get_attempt", "my_results", "result_detail", "my_scholarships", "student_dashboard", "admin_search_read",
-  "admin_dashboard", "admin_reports", "admin_import_template", "admin_export_questions",
+  "public_config", "student_rooms", "student_room", "student_stats", "student_photo", "admin_dashboard", "admin_reports", "admin_import_template", "admin_export_questions",
 ]);
 
 function config() {

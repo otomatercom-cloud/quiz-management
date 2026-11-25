@@ -34,9 +34,11 @@ export async function getStaff(): Promise<StaffSession | null> {
   return s?.kind === "staff" ? s : null;
 }
 
-export async function requireStudent(): Promise<StudentSession> {
+/** Guests (no account) are only allowed where a page passes guestOk — the quiz runner and its result. */
+export async function requireStudent(opts: { guestOk?: boolean } = {}): Promise<StudentSession> {
   const s = await getStudent();
   if (!s) redirect("/login");
+  if (s.guest && !opts.guestOk) redirect("/register");
   return s;
 }
 

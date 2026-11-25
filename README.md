@@ -9,7 +9,7 @@ Student/staff identity is verified by `student_login` / `admin_login`; admin cal
 
 ## Install – Odoo
 1. Copy `odoo-addons/otm_quiz_management` to your addons path; optional: `pip install openpyxl` for XLSX import/export.
-2. `odoo-bin -d <db> -i otm_quiz_management` (add `--test-enable --test-tags=/otm_quiz_management` to run the 26 tests).
+2. `odoo-bin -d <db> -i otm_quiz_management` (add `--test-enable --test-tags=/otm_quiz_management` to run the 39 tests).
 3. Create a user in group **Quiz API Service** (internal user); in its Preferences → Account Security create an API key. Create staff users in the Quiz Admin / Manager / Evaluator groups.
 4. Ensure outgoing mail is configured (registration/password-reset mails).
 
@@ -52,3 +52,23 @@ Odoo group **Teacher (question author)**. Teachers sign in at the same staff log
 
 ## Frontend admin feature map
 Quizzes: create wizard, edit, publish/close/cancel/archive/reset/publish results/recalculate scholarships, delete draft · Question bank: filters, bulk archive/restore/delete, tags, image, MCQ/True-False/Descriptive · Import/export (CSV/XLSX, validate → import, error report, template, answer-key export for admins) · Registrations (approve/reject/disqualify) · Attempts with answer review and manual grading of descriptive answers · Results · Scholarships (approve/reject/override) · Reports · Teachers · Audit log. Assigning student batches to a quiz and converting registrations to leads are Odoo-side (module `otm_quiz_bridge`).
+
+## Rooms, XP and avatars (student community UI)
+* **Rooms** (`otm.quiz.room`): class room (10th Standard) with subject rooms inside (Maths ...). Access mode: open / approval / invite only. Joining the class room opens its subject rooms. Create and manage them in the frontend at `/admin/rooms` (managers; teachers can post announcements in rooms they moderate) or in Odoo > Quizzes > Rooms.
+* **Room-restricted quizzes**: put a quiz in a room (room form > Quizzes). Only members can see, register for and start it; it disappears from the public list. Quizzes with no room behave as before.
+* **XP** (`otm.quiz.xp.log`): one row per student and quiz, best attempt only. XP = round(percentage x 2) + 20 for a pass (max 220); late/expired attempts earn nothing. Level = 1 + XP // 200. Badges (First Quiz, 100% Score, 5-day Streak, 10 Quizzes, 1,000 XP) and the streak are computed on demand. Weekly leaderboard = XP earned in the last 7 days from the room's quizzes.
+* **Privacy (students are minors)**: other students only ever see nickname + character, never real name, phone or photo. A photo needs the parent/guardian consent tick, is resized to 256 px in the browser, and is served only to its owner (`/api/student-photo`). Teachers/staff can see photos in Odoo (Student form).
+* Student UI: `/student/dashboard` (Home), `/student/rooms`, `/student/rooms/<id>`, `/student/stats`, `/student/profile` (character / photo picker). Mobile gets a bottom nav, desktop a top nav.
+* Not included yet: comments/chat, live challenge mode, auto-add of a student batch to a room (bridge module), staff view of student photos in the frontend.
+
+### Deploy script (Odoo module update, then frontend)
+See `deploy/deploy_rooms.sh`. The `elysians` service is stopped before the module update and started after it.
+
+## Public Phase 1: guest quizzes, email OTP, CAPTCHA, rate limits
+
+- **Guest quizzes**: on an *Open* quiz, tick "Also allow guests" in the wizard (or the Odoo form). Visitors enter name + phone (email optional) and start at once. Guests earn no XP or scholarship, cannot join rooms and see only their own result. Attempt limits count per person (phone/email) across guest sessions. Not allowed on room quizzes.
+- **Email OTP** (registration and guests): Settings > Technical > System Parameters, `otm_quiz.require_email_otp` = `1`. Needs a working outgoing mail server. Codes: 6 digits, 10 min, 60 s resend wait, 5 codes/hour/email, locked after 5 wrong guesses; only a hash is stored.
+- **Turnstile**: set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in `frontend/.env`, then rebuild (the site key is baked at build). Applies to register, OTP, guest start and forgot-password. Unset = off.
+- **Rate limits**: BFF per IP, per email (OTP) and per phone (guest); add `deploy/nginx_ratelimit.conf` at nginx too. The in-app limiter is per process; nginx covers restarts and multiple instances.
+- **Deploy**: `deploy/deploy_public.sh` (stops `elysians`, `-u otm_quiz_management`, starts `elysians`, rebuilds, pm2 restart).
+- Tests: 52 Odoo tests and 24 frontend unit tests pass locally. Not covered by tests: real Cloudflare calls, real mail delivery, and the production separate-cursor path.

@@ -9,8 +9,25 @@ export const registerSchema = z.object({
   password: z.string().min(8, "Use at least 8 characters").max(128),
   student_code: z.string().trim().max(40).optional().default(""),
   education: z.string().trim().max(120).optional().default(""),
+  otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code").optional().or(z.literal("")).default(""),
+  turnstile: z.string().max(4096).optional().default(""),
 });
 export type RegisterInput = z.input<typeof registerSchema>;
+
+export const otpRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address").max(160),
+  purpose: z.enum(["register", "guest"]),
+  turnstile: z.string().max(4096).optional().default(""),
+});
+
+export const guestSchema = z.object({
+  quiz_public_id: z.string().regex(/^[0-9a-f]{16}$/),
+  name: z.string().trim().min(2, "Enter your name").max(120),
+  phone: z.string().trim().regex(/^\+?[0-9 \-]{7,18}$/, "Enter a valid mobile number"),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address").max(160).optional().or(z.literal("")).default(""),
+  otp: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code").optional().or(z.literal("")).default(""),
+  turnstile: z.string().max(4096).optional().default(""),
+});
 
 export const loginSchema = z.object({
   login: z.string().trim().min(1, "Enter your email").max(160),
@@ -34,14 +51,25 @@ export const answerSchema = z.object({
 
 export const attemptRef = z.object({ attempt_public_id: publicId });
 export const quizRef = z.object({ quiz_public_id: publicId });
+export const roomRef = z.object({ room_public_id: publicId });
+export const AVATARS = ["fox", "owl", "robot", "cat", "bear"] as const;
+export const avatarSchema = z.object({
+  avatar: z.enum(["fox", "owl", "robot", "cat", "bear", "photo"]),
+  nickname: z.string().trim().regex(/^[A-Za-z0-9_ ]{3,20}$/, "Nickname: 3 to 20 letters, numbers, spaces or _"),
+  photo_consent: z.boolean().default(false),
+  photo_b64: z.string().max(1_500_000).regex(/^[A-Za-z0-9+/=]+$/).optional(),
+  remove_photo: z.boolean().optional(),
+});
 export const registrationRef = z.object({ registration_public_id: publicId });
 
 export const ADMIN_MODELS = [
   "otm.quiz", "otm.quiz.question", "otm.quiz.question.option", "otm.quiz.question.pool", "otm.quiz.scholarship.rule",
   "otm.quiz.registration", "otm.quiz.tag", "otm.quiz.attempt", "otm.quiz.attempt.answer", "otm.quiz.audit.log",
+  "otm.quiz.room", "otm.quiz.room.member", "otm.quiz.room.post",
 ] as const;
 export const WRITABLE_MODELS = [
   "otm.quiz", "otm.quiz.question", "otm.quiz.question.pool", "otm.quiz.scholarship.rule", "otm.quiz.tag",
+  "otm.quiz.room", "otm.quiz.room.member", "otm.quiz.room.post",
 ] as const;
 
 export const adminSearchSchema = z.object({
@@ -84,6 +112,7 @@ export const quizSettingsSchema = z
     show_results_immediately: z.boolean().default(true),
     show_correct_answers_after_submission: z.boolean().default(false),
     registration_required: z.boolean().default(true),
+    allow_guest: z.boolean().default(false),
     registration_start: z.string().optional().default(""),
     registration_end: z.string().optional().default(""),
     registration_limit: z.coerce.number().int().min(0).default(0),

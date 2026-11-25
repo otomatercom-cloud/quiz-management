@@ -26,3 +26,12 @@ acc_option_teacher,option teacher,model_otm_quiz_question_option,group_otm_quiz_
 acc_tag_teacher,tag teacher,model_otm_quiz_tag,group_otm_quiz_teacher,1,0,1,0
 acc_import_teacher,import wizard teacher,model_otm_quiz_import_wizard,group_otm_quiz_teacher,1,1,1,1
 acc_import_line_teacher,import line teacher,model_otm_quiz_import_line,group_otm_quiz_teacher,1,1,1,1
+acc_room_teacher,room teacher,model_otm_quiz_room,group_otm_quiz_teacher,1,0,0,0
+acc_room_eval,room evaluator,model_otm_quiz_room,group_otm_quiz_evaluator,1,0,0,0
+acc_room_mgr,room manager,model_otm_quiz_room,group_otm_quiz_manager,1,1,1,1
+acc_member_teacher,room member teacher,model_otm_quiz_room_member,group_otm_quiz_teacher,1,0,0,0
+acc_member_mgr,room member manager,model_otm_quiz_room_member,group_otm_quiz_manager,1,1,1,1
+acc_post_teacher,room post teacher,model_otm_quiz_room_post,group_otm_quiz_teacher,1,1,1,1
+acc_post_mgr,room post manager,model_otm_quiz_room_post,group_otm_quiz_manager,1,1,1,1
+acc_xp_mgr,quiz xp manager,model_otm_quiz_xp_log,group_otm_quiz_manager,1,0,0,0
+acc_otp_admin,quiz email code admin,model_otm_quiz_email_otp,group_otm_quiz_admin,1,0,0,0

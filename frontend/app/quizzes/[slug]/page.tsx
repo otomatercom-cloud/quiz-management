@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { PublicHeader } from "@/components/public-header";
 import { Alert, Badge, ButtonLink } from "@/components/ui";
+import { GuestStart } from "@/components/guest-start";
 import { RegisterQuizButton } from "@/components/student-actions";
 import { getStudent } from "@/lib/auth/session";
 import { fmtDateTime } from "@/lib/format";
@@ -52,11 +53,14 @@ export default async function QuizDetail({ params }: { params: Promise<{ slug: s
           </section>
         )}
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          {student ? (
+          {student?.guest ? (
+            <Alert tone="info">You are taking a quiz as a guest. <a className="font-semibold text-primary" href="/register">Create a free account</a> for XP and rooms.</Alert>
+          ) : student ? (
             <RegisterQuizButton quizId={quiz.id} open={quiz.registration_open} required={quiz.registration_required} />
           ) : (
             <>
-              <ButtonLink href={`/register`}>Create account to register</ButtonLink>
+              {quiz.allow_guest && <GuestStart quizId={quiz.id} windowOpen={quiz.window_open} />}
+              <ButtonLink href={`/register`}>{quiz.allow_guest ? "Create a free account" : "Create account to register"}</ButtonLink>
               <ButtonLink href={`/login?next=/student/quizzes`} variant="outline">Sign in</ButtonLink>
             </>
           )}

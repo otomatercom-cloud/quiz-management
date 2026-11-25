@@ -74,6 +74,8 @@ class OtmQuizRegistration(models.Model):
     def register(self, quiz, partner):
         """Create (or return the existing) active registration for partner. Raises UserError on rule breaches."""
         quiz.ensure_one()
+        if not quiz._room_access_ok(partner):
+            raise UserError("This quiz is available only to members of its room.")
         quiz.flush_recordset()
         self.env.cr.execute("SELECT id FROM otm_quiz WHERE id = %s FOR UPDATE", [quiz.id])
         quiz.invalidate_recordset()

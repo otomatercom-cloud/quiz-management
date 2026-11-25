@@ -81,6 +81,10 @@ class OtmQuizAttempt(models.Model):
     def start_for(self, quiz, partner):
         """Start (or resume) an attempt. All rules are enforced server-side."""
         quiz.ensure_one()
+        if not quiz._room_access_ok(partner):
+            raise UserError("This quiz is available only to members of its room.")
+        if partner.otm_is_guest and (not quiz.allow_guest or quiz.registration_required):
+            raise UserError("Please create a free account to take this quiz.")
         now = fields.Datetime.now()
         registration = False
         if quiz.registration_required:
@@ -228,6 +232,7 @@ class OtmQuizAttempt(models.Model):
                     vals["state"] = "evaluated"
             att.write(vals)
             att._compute_scholarship()
+            self.env["otm.quiz.xp.log"]._award(att)
 
     # ------------------------------------------------------------------ scholarship
     def _compute_scholarship(self):
@@ -237,8 +242,10 @@ class OtmQuizAttempt(models.Model):
             quiz = att.quiz_id
             vals = {"scholarship_rule_id": False, "scholarship_type": False, "scholarship_value": 0.0,
                     "scholarship_amount": 0.0}
-            if not quiz.scholarship_enabled:
-                vals.update(scholarship_status="not_applicable", scholarship_explanation="Scholarships are not enabled.")
+            if not quiz.scholarship_enabled or att.student_id.otm_is_guest:
+                vals.update(scholarship_status="not_applicable",
+                            scholarship_explanation="Scholarships are not available for guest attempts." if quiz.scholarship_enabled
+                            else "Scholarships are not enabled.")
             elif att.result_status == "pending":
                 vals.update(scholarship_status="pending", scholarship_explanation="Awaiting manual grading.")
             else:

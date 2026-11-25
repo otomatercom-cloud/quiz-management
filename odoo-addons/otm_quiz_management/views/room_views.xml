@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_otm_quiz_room_list" model="ir.ui.view">
+        <field name="name">otm.quiz.room.list</field>
+        <field name="model">otm.quiz.room</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="parent_id"/>
+                <field name="access_mode"/>
+                <field name="member_count"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_otm_quiz_room_form" model="ir.ui.view">
+        <field name="name">otm.quiz.room.form</field>
+        <field name="model">otm.quiz.room</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="parent_id"/>
+                            <field name="access_mode"/>
+                            <field name="color"/>
+                        </group>
+                        <group>
+                            <field name="teacher_ids" widget="many2many_tags"/>
+                            <field name="member_count"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <field name="description" placeholder="What is this room for?"/>
+                    <notebook>
+                        <page string="Quizzes">
+                            <field name="quiz_ids" widget="many2many_tags"/>
+                        </page>
+                        <page string="Members">
+                            <field name="member_ids">
+                                <list editable="bottom">
+                                    <field name="student_id"/>
+                                    <field name="state"/>
+                                    <field name="joined_on"/>
+                                    <button name="action_approve" type="object" string="Approve" icon="fa-check"
+                                            invisible="state == 'approved'"/>
+                                    <button name="action_reject" type="object" string="Reject" icon="fa-times"
+                                            invisible="state == 'rejected'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Announcements">
+                            <field name="post_ids">
+                                <list editable="bottom">
+                                    <field name="body"/>
+                                    <field name="pinned"/>
+                                    <field name="author_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_otm_quiz_room" model="ir.actions.act_window">
+        <field name="name">Rooms</field>
+        <field name="res_model">otm.quiz.room</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_otm_quiz_xp" model="ir.actions.act_window">
+        <field name="name">XP Log</field>
+        <field name="res_model">otm.quiz.xp.log</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <record id="view_otm_quiz_xp_list" model="ir.ui.view">
+        <field name="name">otm.quiz.xp.log.list</field>
+        <field name="model">otm.quiz.xp.log</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" delete="0">
+                <field name="student_id"/>
+                <field name="quiz_id"/>
+                <field name="xp"/>
+                <field name="awarded_on"/>
+            </list>
+        </field>
+    </record>
+</odoo>

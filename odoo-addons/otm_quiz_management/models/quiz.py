@@ -90,6 +90,28 @@ class OtmQuiz(models.Model):
 
     _public_uniq = models.Constraint("unique(public_id)", "Public identifier must be unique.")
 
+    allow_guest = fields.Boolean(
+        string="Allow Guests", help="Anyone can take this open quiz with just a name and mobile number (no account). "
+                                    "Guests earn no scholarship or XP and cannot use the student portal.")
+
+    @api.constrains("allow_guest", "registration_required", "room_ids")
+    def _check_guest_access(self):
+        for q in self:
+            if q.allow_guest and (q.registration_required or q.with_context(active_test=False).room_ids):
+                raise ValidationError("Guest access needs an open quiz (no registration) that is not inside a room.")
+
+    room_ids = fields.Many2many(
+        "otm.quiz.room", "otm_quiz_room_rel", "quiz_id", "room_id", string="Rooms",
+        help="When set, only members of these rooms (or of their class room) can see, register for and start this quiz.")
+
+    def _room_access_ok(self, partner):
+        """True when the quiz is not room-restricted or the student is an approved member of one of its rooms."""
+        self.ensure_one()
+        rooms = self.sudo().with_context(active_test=False).room_ids
+        if not rooms:
+            return True
+        return bool(rooms & self.env["otm.quiz.room"]._accessible_for(partner))
+
     # ------------------------------------------------------------------ computes
     @api.depends("name", "public_id")
     def _compute_slug(self):

@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 
-export type StudentSession = { kind: "student"; partnerId: number; name: string };
+export type StudentSession = { kind: "student"; partnerId: number; name: string; guest?: boolean };
 export type StaffSession = { kind: "staff"; userId: number; name: string; roles: string[] };
 export type Session = StudentSession | StaffSession;
 
@@ -24,7 +24,7 @@ export async function verifySession(token: string | undefined, secret: string | 
   try {
     const { payload } = await jwtVerify(token, key(secret), { algorithms: ["HS256"] });
     if (payload.kind === "student" && typeof payload.partnerId === "number")
-      return { kind: "student", partnerId: payload.partnerId, name: String(payload.name ?? "") };
+      return { kind: "student", partnerId: payload.partnerId, name: String(payload.name ?? ""), ...(payload.guest === true ? { guest: true } : {}) };
     if (payload.kind === "staff" && typeof payload.userId === "number" && Array.isArray(payload.roles))
       return { kind: "staff", userId: payload.userId, name: String(payload.name ?? ""), roles: payload.roles.map(String) };
   } catch {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- 1 = students and guests must verify their email with a code. Turn on after outgoing mail works. -->
+    <record id="param_require_email_otp" model="ir.config_parameter">
+        <field name="key">otm_quiz.require_email_otp</field>
+        <field name="value">0</field>
+    </record>
+    <record id="cron_public_cleanup" model="ir.cron">
+        <field name="name">Quiz: clean old email codes and unused guests</field>
+        <field name="model_id" ref="model_otm_quiz_email_otp"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_cleanup()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>
