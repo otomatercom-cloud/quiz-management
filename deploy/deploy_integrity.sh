@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# Exam Integrity release (focus watcher, SEB, calculator, spreadsheet). Run as root on the server. Edit the 5 variables first.
+# Exam Integrity release (focus watcher, SEB, calculator, spreadsheet). Run as root on the server. Defaults are set for the lg19 server; check the variables first.
 set -euo pipefail
 
-ODOO_BIN="/opt/odoo/odoo-bin"            # path to odoo-bin
-ODOO_CONF="/etc/odoo/odoo.conf"          # odoo.conf
-DB="YOUR_DB_NAME"                        # database name
+ODOO_BIN="/opt/lg19/odoo/odoo-bin"         # path to odoo-bin
+PY="/opt/lg19/lg19-venv/bin/python3"     # python of the lg19 venv
+ODOO_CONF="/etc/lg19.conf"                # odoo.conf
+DB=""                                    # database name; leave empty to read db_name from the conf
 APP="/opt/lg19/lg19-custom-addons/quiz-management"   # folder that holds odoo-addons/ and frontend/
-ODOO_USER="odoo"                         # linux user that runs odoo
-SERVICE="CHANGE_ME"                      # systemd service of THIS Odoo (lg19), NOT elysians. Find: systemctl list-units | grep -i odoo
+ODOO_USER="lg19"                         # linux user that runs odoo
+SERVICE="lg19"                           # systemd service of THIS Odoo (not elysians, crm or clt_logic)
 
-[ "$SERVICE" != "CHANGE_ME" ] || { echo "Set SERVICE (the lg19 Odoo systemd service) at the top of this script."; exit 1; }
+[ -n "$DB" ] || DB=$(awk -F= '/^db_name/{gsub(/ /,"",$2); print $2}' "$ODOO_CONF")
+{ [ -n "$DB" ] && [ "$DB" != "False" ]; } || { echo "Set DB at the top (db_name is not in $ODOO_CONF)."; exit 1; }
+echo "Service: $SERVICE | DB: $DB"
 systemctl cat "$SERVICE" >/dev/null 2>&1 || { echo "Service $SERVICE not found."; exit 1; }
 
 # 1) Backup first (database). Filestore backup is separate and optional for this release.
@@ -21,7 +24,7 @@ rsync -a /root/quiz-management/odoo-addons/ "$APP/odoo-addons/"
 
 # 3) Odoo module update: the Odoo service must be STOPPED first, started after
 systemctl stop "$SERVICE"
-sudo -u "$ODOO_USER" "$ODOO_BIN" -c "$ODOO_CONF" -d "$DB" -u otm_quiz_management --stop-after-init
+sudo -u "$ODOO_USER" "$PY" "$ODOO_BIN" -c "$ODOO_CONF" -d "$DB" -u otm_quiz_management --stop-after-init
 systemctl start "$SERVICE"
 
 # 3b) Turnstile keys go in frontend/.env (create free site at dash.cloudflare.com > Turnstile). Skipped if unset:
