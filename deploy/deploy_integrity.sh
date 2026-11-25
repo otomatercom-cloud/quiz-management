@@ -5,7 +5,7 @@ set -euo pipefail
 ODOO_BIN="/opt/lg19/odoo/odoo-bin"         # path to odoo-bin
 PY="/opt/lg19/lg19-venv/bin/python3"     # python of the lg19 venv
 ODOO_CONF="/etc/lg19.conf"                # odoo.conf
-DB=""                                    # database name; leave empty to read db_name from the conf
+DB="${DB:-}"                          # database name: run as  DB=yourdb ./deploy_x.sh  (or leave empty to read db_name from the conf)
 APP="/opt/lg19/lg19-custom-addons/quiz-management"   # folder that holds odoo-addons/ and frontend/
 ODOO_USER="lg19"                         # linux user that runs odoo
 SERVICE="lg19"                           # systemd service of THIS Odoo (not elysians, crm or clt_logic)
