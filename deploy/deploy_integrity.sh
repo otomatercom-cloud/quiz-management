@@ -19,8 +19,16 @@ systemctl cat "$SERVICE" >/dev/null 2>&1 || { echo "Service $SERVICE not found."
 sudo -u postgres pg_dump -Fc "$DB" > "/root/${DB}_before_integrity_$(date +%F_%H%M).dump"
 
 # 2) Copy the new files over (zip unpacked to /root/quiz-management)
-rsync -a --delete --exclude node_modules --exclude .next --exclude .env /root/quiz-management/frontend/ "$APP/frontend/"
-rsync -a /root/quiz-management/odoo-addons/ "$APP/odoo-addons/"
+if [ -d "$APP/.git" ]; then
+  # APP is itself the git checkout: update it with git, never overwrite it from another copy
+  git -C "$APP" fetch origin
+  git -C "$APP" status --short | head -20
+  git -C "$APP" diff --quiet && git -C "$APP" diff --cached --quiet || { echo "Local changes in $APP. Run: git -C $APP stash   then run this script again."; exit 1; }
+  git -C "$APP" pull --ff-only
+else
+  rsync -a --delete --exclude node_modules --exclude .next --exclude .env /root/quiz-management/frontend/ "$APP/frontend/"
+  rsync -a /root/quiz-management/odoo-addons/ "$APP/odoo-addons/"
+fi
 
 # 3) Odoo module update: the Odoo service must be STOPPED first, started after
 systemctl stop "$SERVICE"
